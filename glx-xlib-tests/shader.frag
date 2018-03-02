@@ -3,15 +3,15 @@ uniform int time;
 
 vec4 mycolor(float rot, float off) {
 	vec2 canvasCoords = vec2(gl_FragCoord.x / 1920.0, gl_FragCoord.y / 1080.0);
+	canvasCoords = canvasCoords * mat2(cos(rot), sin(rot), -sin(rot), cos(rot));
+	vec4 color = texture2D(canvas, canvasCoords);
 
 	// float rot = 0.05;
-	canvasCoords = canvasCoords * mat2(cos(rot), sin(rot), -sin(rot), cos(rot));
 
-	if ((gl_FragCoord.x + off < time * 20) || (gl_FragCoord.x + off > time * 20 + 2)) {
-		return texture2D(canvas, canvasCoords);
-	} else {
-		return vec4(250.0,250.0,250.0,250.0);
+	if ((gl_FragCoord.x > time * 20) && (gl_FragCoord.x < time * 20 + 2)) {
+		color = vec4(1.0,1.0,1.0,1.0);
 	}
+	return color;
 }
 
 void main() {
