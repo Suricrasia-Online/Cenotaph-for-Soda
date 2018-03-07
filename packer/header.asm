@@ -27,7 +27,9 @@ e_ident:
 	db 0x7F, "ELF", 2, 1, 1, 0
 
 e_padding:
-	dq 0
+	mov	edi, __memfd
+	jmp p_paddr
+	db 0
 
 e_type:
 	dw 2
@@ -36,7 +38,7 @@ e_machine:
 e_version:
 	dd 1
 e_entry:
-	dq _start
+	dq e_padding
 e_phoff:
 	dq phdr - $$
 e_shoff:
@@ -72,7 +74,9 @@ p_vaddr:
 	dq $$
 
 p_paddr: ;apparently p_paddr can be nonsense?
-	dq 0
+	mov ax, sys_memfd_create
+	syscall
+	jmp _start
 
 p_filesz:
 	dq filesize
@@ -83,95 +87,94 @@ p_align:
 
 phdrsize equ $ - phdr
 
+
 __exe:
-		db '/proc/self/exe',0
+	db '/proc/self/exe',0
 __memfd:
-		db '/proc/self/fd/3',0
+	db '/proc/self/fd/3',0
 __gzip:
-		db '/bin/zcat',0
+	db '/bin/zcat',0
 
 _start:
 
-		minimov rax, sys_memfd_create
-		minimov	rdi, __memfd
-		syscall
+	; mov ax, sys_memfd_create
+	; mov	edi, __memfd
+	; syscall
 
-		minimov rax, sys_fork
-		syscall
+	minimov rax, sys_fork
+	syscall
 
-		; move to child or parent
-		test rax,rax
-		jz _child
+	; move to child or parent
+	test eax,eax
+	jz _child
+
 _parent:
-		;these are initialized to zero on start
-		; xor rdx, rdx ;null
-		; xor r10, r10 ;null
-		xor rdi, rdi ;null
-		minimov rax, sys_waitid
-		add r10, 4 
-		syscall
+	; can be edi, will be smaller, but scary...
+	xor rdi, rdi
+	mov ax, sys_waitid
+	add r10, 4 
+	syscall
 
-		; get environ pointer from stack into rdx
-		pop rdx ;argc
-		inc rdx ;argc + 1
-		shl rdx, 3 ; (argc+1)*8
-		add rdx,rsp
+	; get environ pointer from stack into rdx
+	pop rdx ;argc
+	; assume argc == 1
+	mov dl, 16+8
+	add rdx,rsp
 
-		; execve demo 
-		minimov rax, sys_execve
-		minimov	rdi, __memfd
-		minimov	rsi, rsp ;use our args as args
-		syscall
+	; execve demo 
+	minimov rax, sys_execve
+	minimov	rdi, __memfd
+	minimov	rsi, rsp ;use our args as args
+	syscall
 
-		minimov rax, sys_exit
-		minimov rdi, 420
-		syscall
+	; minimov rax, sys_exit
+	; minimov rdi, 420
+	; syscall
 
 
 _child:
-		; open self 
-		minimov	rdi, __exe
-		mov al, sys_open ;open
-		;these are initialized to zero on start
-		; xor rsi, rsi
-		; xor rdx, rdx
-		syscall
+	; open self 
+	minimov	rdi, __exe
+	mov al, sys_open ;open
+	;these are initialized to zero on start
+	; xor rsi, rsi
+	; xor rdx, rdx
+	syscall
 
-		;fd1
-		push rax
+	;fd1
+	push rax
 
-		;seek
-		minimov rax, sys_lseek ;lseek
-		pop rdi
-		push rdi
-		minimov rsi, filesize
-		;these are initialized to zero on start
-		; xor rdx, rdx
-		syscall
+	;seek
+	minimov rax, sys_lseek ;lseek
+	pop rdi
+	push rdi
+	minimov rsi, filesize
+	;these are initialized to zero on start
+	; xor rdx, rdx
+	syscall
 
-		;dup2 demo->stdout
-		minimov rax, sys_dup2
-		minimov rdi, 3
-		minimov rsi, 1 ;1 = stdout
-		syscall
+	;dup2 demo->stdout
+	minimov rax, sys_dup2
+	minimov rdi, 3
+	minimov rsi, 1 ;1 = stdout
+	syscall
 
-		;dup2 self->stdin
-		minimov rax, sys_dup2
-		pop rdi
-		xor rsi, rsi ;0 = stdin
-		syscall
+	;dup2 self->stdin
+	minimov rax, sys_dup2
+	pop rdi
+	xor rsi, rsi ;0 = stdin
+	syscall
 
-		;setup arguments to gzip
-		push 0
-		push __gzip
+	;setup arguments to gzip
+	push 0
+	push __gzip
 
-		;execve
-		minimov rax, sys_execve
-		minimov	rdi, __gzip
-		minimov	rsi, rsp
-		xor rdx, rdx ;empty environ
-		syscall
+	;execve
+	minimov rax, sys_execve
+	minimov	rdi, __gzip
+	minimov	rsi, rsp
+	xor rdx, rdx ;empty environ
+	syscall
 
-		align 4
 
 filesize	equ	 $ - $$
