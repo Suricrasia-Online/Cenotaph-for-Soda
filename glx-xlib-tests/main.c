@@ -67,11 +67,12 @@ Window win = XCreateWindow(dpy, root, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, 0, vi->
  XMapWindow(dpy, win);
 
 
-XStoreName(dpy, win, "Shark Girls Rule The World");
+// XStoreName(dpy, win, "Shark Girls Rule The World");
 GLXContext glc = glXCreateContext(dpy, vi, NULL, 1);
 if (glc == NULL) {
   return;
 }
+
 glXMakeCurrent(dpy, win, glc);
 
 

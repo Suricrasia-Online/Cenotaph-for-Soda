@@ -27,23 +27,26 @@ e_ident:
 	db 0x7F, "ELF", 2, 1, 1, 0
 
 e_padding:
-	mov	edi, __memfd
-	jmp p_paddr
-	db 0
+	; here we are setting the values for the memfd_create syscall
+	; passing "rsp" as the name to the kernel. the name doesn't matter but it cannot be null
+	; any address in the current space is probably fine
+	mov ax, sys_memfd_create
+	minimov rdi, rsp
+	jmp p_flags
 
 e_type:
 	dw 2
 e_machine:
 	dw 0x3e
-e_version:
+e_version: ;this might be nonsense too
 	dd 1
 e_entry:
 	dq e_padding
 e_phoff:
 	dq phdr - $$
-e_shoff:
+e_shoff: ;this might be nonsense too
 	dq 0
-e_flags:
+e_flags: ;this might be nonsense too
 	dd 0
 e_ehsize:
 	dw ehdrsize
@@ -66,46 +69,56 @@ p_type:
 	dd 1
 
 p_flags:
-	dd 0xf
+	;p_flags is supposed to be 0x0f, and syscall is 0x0f05;
+	;the kernel only looks at the bottom byte, so I can put code here!
+	syscall
+	jmp p_paddr
 
 p_offset:
 	dq 0
 p_vaddr:
 	dq $$
 
-p_paddr: ;apparently p_paddr can be nonsense?
-	mov ax, sys_memfd_create
+p_paddr: ;apparently p_paddr can be nonsense
+	mov al, sys_fork
 	syscall
+	test eax,eax
 	jmp _start
 
 p_filesz:
 	dq filesize
 p_memsz:
 	dq filesize
-p_align:
-	dq 0x10
+p_align: ;align can be nonsense too apparently!!
+	; dq 0x10
 
-phdrsize equ $ - phdr
+phdrsize equ $ - phdr + 0x8
 
+; ===========================
+; ========= STRINGS =========
+; ===========================
 
+; the repeated "/proc/self/" makes me a sad shark
 __exe:
 	db '/proc/self/exe',0
 __memfd:
-	db '/proc/self/fd/3',0
+	db '/proc/self/'
+__hi_were_the_replacements:
+	db 'fd/3',0
 __gzip:
 	db '/bin/zcat',0
 
+; ===========================
+; ========= CODE!!! =========
+; ===========================
+
 _start:
+	; NOTICE: execution begain in e_padding, follow jumps from there to here
 
-	; mov ax, sys_memfd_create
-	; mov	edi, __memfd
-	; syscall
-
-	minimov rax, sys_fork
-	syscall
+	; forget about argc so rsp points to argv array
+	pop rdx
 
 	; move to child or parent
-	test eax,eax
 	jz _child
 
 _parent:
@@ -116,7 +129,6 @@ _parent:
 	syscall
 
 	; get environ pointer from stack into rdx
-	pop rdx ;argc
 	; assume argc == 1
 	mov dl, 16+8
 	add rdx,rsp
@@ -133,6 +145,10 @@ _parent:
 
 
 _child:
+	; Rock'n'rollin' 'til the break of dawn!
+	; Hey, where's Tommy? Someone find Tommy!
+	; mov qword [__hi_were_the_replacements], `exe\x00`
+
 	; open self 
 	minimov	rdi, __exe
 	mov al, sys_open ;open
@@ -165,13 +181,10 @@ _child:
 	xor rsi, rsi ;0 = stdin
 	syscall
 
-	;setup arguments to gzip
-	push 0
-	push __gzip
-
 	;execve
 	minimov rax, sys_execve
 	minimov	rdi, __gzip
+	; use our arguments
 	minimov	rsi, rsp
 	xor rdx, rdx ;empty environ
 	syscall
