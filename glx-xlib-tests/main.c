@@ -5,13 +5,12 @@
 #include<stdint.h>
 #include<X11/X.h>
 #include<X11/Xlib.h>
-#include <X11/Xatom.h>
 #include<GL/gl.h>
 #include<GL/glx.h>
 #include<GL/glu.h>
 
 #include "shader.h"
-// #define DEBUG true
+#define DEBUG true
 
 static inline void swap(GLuint* t1, GLuint* t2) {
     GLuint temp = *t1;
@@ -22,14 +21,14 @@ static inline void swap(GLuint* t1, GLuint* t2) {
 #define CANVAS_WIDTH 1920
 #define CANVAS_HEIGHT 1080
 
-static inline void render(GLuint fb, GLuint tex, int time) {
+static inline void render(GLuint program, GLuint fb, GLuint tex, float time) {
 glBindFramebuffer(GL_FRAMEBUFFER, fb);
-glViewport(0,0, CANVAS_WIDTH, CANVAS_HEIGHT);
+// glViewport(0,0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
 glActiveTexture(GL_TEXTURE0);
 glBindTexture(GL_TEXTURE_2D, tex);
 glUniform1i(0, 0);
-glUniform1i(1, time);
+glUniform1f(1, time);
 
 glRecti(-1,-1,1,1);
 }
@@ -50,27 +49,32 @@ XVisualInfo* vi = glXChooseVisual(dpy, 0, att);
 
 Colormap cmap = XCreateColormap(dpy, root, vi->visual, AllocNone);
 
+Cursor cursor;
+Pixmap csr;
+XColor xcolor;
+static char csr_bits[] = {0x00};
+
+csr= XCreateBitmapFromData(dpy,root,csr_bits,1,1);
+cursor= XCreatePixmapCursor(dpy,csr,csr,&xcolor,&xcolor,1,1); 
+
 XSetWindowAttributes    swa;
 swa.colormap = cmap;
-// swa.override_redirect = 1;    
-swa.event_mask = ExposureMask | KeyPressMask;                                                   
-Window win = XCreateWindow(dpy, root, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, 0, vi->depth, InputOutput, vi->visual, CWColormap | CWEventMask /*| CWOverrideRedirect*/, &swa);
+swa.override_redirect = 1;
+swa.event_mask = ExposureMask | KeyPressMask;
+swa.cursor = cursor;
+Window win = XCreateWindow(dpy, root, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, 0, vi->depth, InputOutput, vi->visual, CWColormap | CWEventMask | CWOverrideRedirect | CWCursor, &swa);
 
-
- Atom atoms[2] = { XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", false), None };
-  XChangeProperty(
-      dpy, 
-      win, 
-      XInternAtom(dpy, "_NET_WM_STATE", false),
-      XA_ATOM, 32, PropModeReplace, atoms, 1
-  );
  XMapWindow(dpy, win);
-// XStoreName(dpy, win, "VERY SIMPLE APPLICATION");
+
+
+XStoreName(dpy, win, "Shark Girls Rule The World");
 GLXContext glc = glXCreateContext(dpy, vi, NULL, 1);
 if (glc == NULL) {
   return;
 }
 glXMakeCurrent(dpy, win, glc);
+
+
 
 GLuint textureA;
 glEnable(GL_TEXTURE_2D);
@@ -80,7 +84,7 @@ glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 // glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 // glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, CANVAS_WIDTH, CANVAS_HEIGHT, 0, GL_RGBA,
+glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, CANVAS_WIDTH, CANVAS_HEIGHT, 0, GL_RGBA,
   GL_FLOAT, NULL);
 
 GLuint fboA;
@@ -97,7 +101,7 @@ glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 // glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 // glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, CANVAS_WIDTH, CANVAS_HEIGHT, 0, GL_RGBA,
+glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, CANVAS_WIDTH, CANVAS_HEIGHT, 0, GL_RGBA,
   GL_FLOAT, NULL);
 
 GLuint fboB;
@@ -161,16 +165,25 @@ exit(-10);
 
 glUseProgram(p);
 
-glBindFramebuffer(GL_FRAMEBUFFER, fboA);
+glBindFramebuffer(GL_FRAMEBUFFER, 0);
 glViewport(0,0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
 glClearColor(0.0,0.0,0.0,0.0);
 glClear(GL_COLOR_BUFFER_BIT);
 
-glBindFramebuffer(GL_FRAMEBUFFER, fboB);
-glViewport(0,0, CANVAS_WIDTH, CANVAS_HEIGHT);
+glXSwapBuffers(dpy, win);
+XGrabKeyboard(dpy, win, true, GrabModeAsync, GrabModeAsync, CurrentTime);
 
-glClearColor(0.0,0.0,0.0,0.0);
+glBindFramebuffer(GL_FRAMEBUFFER, fboA);
+// glViewport(0,0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+// glClearColor(0.0,0.0,0.0,0.0);
+glClear(GL_COLOR_BUFFER_BIT);
+
+glBindFramebuffer(GL_FRAMEBUFFER, fboB);
+// glViewport(0,0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+// glClearColor(0.0,0.0,0.0,0.0);
 glClear(GL_COLOR_BUFFER_BIT);
 
 
@@ -184,8 +197,8 @@ glClear(GL_COLOR_BUFFER_BIT);
 // glBindFramebuffer(GL_FRAMEBUFFER, 0);
 // glBindFramebuffer(GL_FRAMEBUFFER, fboA);
 
-for (int x = 0; x < 90; x++) {
-  render(fboA, textureB, x);
+for (int x = 0; x < 100; x++) {
+  render(p, fboA, textureB, x);
   swap(&fboA, &fboB);
   swap(&textureA, &textureB);
 }
@@ -215,27 +228,24 @@ printf("\n");
 }
 
 // exit(0);
-#endif 
+#endif
 
-int running=1;
-while(running) {
+glBindFramebuffer(GL_FRAMEBUFFER, 0);
+// glViewport(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+glActiveTexture(GL_TEXTURE0);
+glBindTexture(GL_TEXTURE_2D, textureB);
+glUniform1i(0, 0);
+glUniform1i(1, 0);
+
+glRecti(-1,-1,1,1);
+glXSwapBuffers(dpy, win);
+
+
+while(1) {
   XEvent xev;
         XNextEvent(dpy, &xev);
 
-        if(xev.type == Expose) {
-              glBindFramebuffer(GL_FRAMEBUFFER, 0);
-              glViewport(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-              glActiveTexture(GL_TEXTURE0);
-              glBindTexture(GL_TEXTURE_2D, textureB);
-              glUniform1i(0, 0);
-              glUniform1i(1, 0);
-
-              glRecti(-1,-1,1,1);
-              glXSwapBuffers(dpy, win);
-
-        }
-
-        else if(xev.type == KeyPress) {
+        if(xev.type == KeyPress) {
           asm(".intel_syntax noprefix");
           asm("mov rax, 60");
       		asm("syscall");
