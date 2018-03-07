@@ -83,16 +83,20 @@ p_align:
 
 phdrsize equ $ - phdr
 
-__demo:
-		db './o',0
-__proc:
+__exe:
 		db '/proc/self/exe',0
+__memfd:
+		db '/proc/self/fd/3',0
 __gzip:
 		db '/bin/zcat',0
 
 _start:
 
-		mov al, sys_fork
+		minimov rax, sys_memfd_create
+		minimov	rdi, __memfd
+		syscall
+
+		minimov rax, sys_fork
 		syscall
 
 		; move to child or parent
@@ -100,9 +104,9 @@ _start:
 		jz _child
 _parent:
 		;these are initialized to zero on start
-		; xor rsi, rsi ;null
 		; xor rdx, rdx ;null
 		; xor r10, r10 ;null
+		xor rdi, rdi ;null
 		minimov rax, sys_waitid
 		add r10, 4 
 		syscall
@@ -115,7 +119,7 @@ _parent:
 
 		; execve demo 
 		minimov rax, sys_execve
-		minimov	rdi, __demo
+		minimov	rdi, __memfd
 		minimov	rsi, rsp ;use our args as args
 		syscall
 
@@ -126,7 +130,7 @@ _parent:
 
 _child:
 		; open self 
-		minimov	rdi, __proc
+		minimov	rdi, __exe
 		mov al, sys_open ;open
 		;these are initialized to zero on start
 		; xor rsi, rsi
@@ -145,25 +149,15 @@ _child:
 		; xor rdx, rdx
 		syscall
 
-		; open demo 
-		minimov	rdi, __demo
-		minimov rax, sys_open ;open
-		minimov rsi, 0o1101 ;O_WRONLY | O_CREAT | O_TRUNC
-		minimov rdx, 0o755 ; common permissions
-		syscall
-
-		;fd2
-		push rax
-
 		;dup2 demo->stdout
 		minimov rax, sys_dup2
-		pop	rdi
+		minimov rdi, 3
 		minimov rsi, 1 ;1 = stdout
 		syscall
 
 		;dup2 self->stdin
 		minimov rax, sys_dup2
-		pop	rdi
+		pop rdi
 		xor rsi, rsi ;0 = stdin
 		syscall
 
