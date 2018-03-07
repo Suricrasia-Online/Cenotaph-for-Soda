@@ -9,4 +9,5 @@ main : main.c shader.h Makefile
 	strip main
 	strip -R .note -R .comment -R .eh_frame -R .eh_frame_hdr -R .note.gnu.build-id main
 	wc -c main
-	gzip -c main | wc -c
+	gzip -9 -c main | wc -c
+	zopfli --gzip --i50 -c main | wc -c
