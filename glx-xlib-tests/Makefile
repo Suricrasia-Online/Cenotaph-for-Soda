@@ -1,5 +1,5 @@
 
-all : main
+all : main_packed
 
 shader.h : shader.frag Makefile
 	mono ~/Downloads/shader_minifier.exe --preserve-externals shader.frag -o shader.h
@@ -9,5 +9,11 @@ main : main.c shader.h Makefile
 	strip main
 	strip -R .note -R .comment -R .eh_frame -R .eh_frame_hdr -R .note.gnu.build-id main
 	wc -c main
+
+main_packed : main ../packer/header Makefile
 	gzip --no-name -9 -c main | wc -c
-	zopfli --gzip --i50 -c main | wc -c
+	zopfli --gzip --i50 -c main > main.gz
+	wc -c main.gz
+	cat ../packer/header main.gz > main_packed
+	chmod +x main_packed
+	wc -c main_packed
