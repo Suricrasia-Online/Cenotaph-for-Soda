@@ -10,7 +10,7 @@
 #include<GL/glu.h>
 
 #include "shader.h"
-#define DEBUG true
+// #define DEBUG true
 
 static inline void swap(GLuint* t1, GLuint* t2) {
     GLuint temp = *t1;

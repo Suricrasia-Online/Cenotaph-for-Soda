@@ -87,8 +87,8 @@ p_vaddr:
 	dq $$
 
 p_paddr: ;apparently p_paddr can be nonsense
-	mov ebx, __memfd
 	pop rcx ;this is just so we can forget about argc and have rsp point to the start of argv
+	push __memfd
 
 	jmp _start
 
@@ -107,6 +107,8 @@ phdrsize equ $ - phdr + 0x8
 ; ===========================
 
 ;replacing the "fd/3" with "exe\0" on the fly saves... 4 bytes
+;its actually good we did this because the __memfd load into register 
+;can be done before fork so that both processes get it
 __memfd:
 	db '/proc/self/'
 __hi_were_the_replacements:
@@ -130,6 +132,7 @@ _parent:
 	mov r10b, 4 
 	syscall
 
+	pop rdi
 	; get environ pointer from stack into rdx
 	; assume argc == 1
 	mov dl, 16+8
@@ -137,7 +140,6 @@ _parent:
 
 	; execve demo 
 	mov al, sys_execve
-	minimov rdi, rbx
 	minimov	rsi, rsp ;use our args as args
 	syscall
 
@@ -149,7 +151,8 @@ _child:
 	mov [rel __hi_were_the_replacements], edi
 
 	; open self 
-	minimov rdi, rbx
+	pop rdi
+	
 	mov al, sys_open ;open
 	syscall
 
