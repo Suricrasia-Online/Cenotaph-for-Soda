@@ -39,13 +39,14 @@ e_type:
 	dw 2
 e_machine:
 	dw 0x3e
-e_version: ;kernel is asleep post assembly
+e_version: ;kernel is asleep! post assembly!
 	mov al, sys_fork
 	jmp p_paddr
 e_entry:
 	dq e_padding
 e_phoff:
 	dq phdr - $$
+
 e_shoff:
 e_flags:
 __gzip:
@@ -90,29 +91,23 @@ p_paddr: ;apparently p_paddr can be nonsense
 	pop rcx ;this is just so we can forget about argc and have rsp point to the start of argv
 	push __memfd ;both processes need this pointer so let's put it on the stack so they can get it with a single byte
 
-	jmp _start
+	syscall
 
 p_filesz:
-	dq filesize
+	; this stuff can have code but it can't be bigger than about 4 bytes
+	test eax, eax
+	jmp _start
+	db 0,0,0,0
 p_memsz:
-	dq filesize
+	; must be equal to p_filesz
+	test eax, eax
+	jmp _start + 8
+	db 0,0,0,0
 p_align: ;align can be nonsense too apparently!!
 	; dq 0x10
 
 phdrsize equ $ - phdr + 0x8
 
-
-; ===========================
-; ========= STRINGS =========
-; ===========================
-
-;replacing the "fd/3" with "exe\0" on the fly saves... 4 bytes
-;its actually good we did this because the __memfd load into register 
-;can be done before fork so that both processes get it
-__memfd:
-	db '/proc/self/'
-__hi_were_the_replacements:
-	db 'fd/3',0
 
 ; ===========================
 ; ========= CODE!!! =========
@@ -121,17 +116,16 @@ __hi_were_the_replacements:
 _start:
 	; NOTICE: execution begain in e_padding, follow jumps from there to here
 
-	syscall
-	test eax,eax
 	jz _child
 
 _parent:
-
+	; wait for child
 	xor edi, edi
 	mov ax, sys_waitid
 	mov r10b, 4 
 	syscall
 
+	; gets pointer to __memfd from stack
 	pop rdi
 	; get environ pointer from stack into rdx
 	; assume argc == 1
@@ -186,6 +180,18 @@ _child:
 	; xor rdx, rdx ;empty environ
 	syscall
 
+
+; ===========================
+; ========= STRINGS =========
+; ===========================
+
+;replacing the "fd/3" with "exe\0" on the fly saves... 4 bytes
+;its actually good we did this because the __memfd load into register 
+;can be done before fork so that both processes get it
+__memfd:
+	db '/proc/self/'
+__hi_were_the_replacements:
+	db 'fd/3',0
 
 
 filesize	equ	 $ - $$
