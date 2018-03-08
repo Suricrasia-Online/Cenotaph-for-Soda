@@ -168,7 +168,7 @@ _child:
 
 	;dup2 demo->stdout
 	mov al, sys_dup2
-	mov dil, 3
+	dec edi
 	mov sil, 1 ;1 = stdout
 	syscall
 
