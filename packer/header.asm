@@ -95,17 +95,6 @@ p_align: ;align can be nonsense too apparently!!
 
 phdrsize equ $ - phdr + 0x8
 
-; ===========================
-; ========= STRINGS =========
-; ===========================
-
-; the repeated "/proc/self/" makes me a sad shark
-__exe:
-	db '/proc/self/exe',0
-__memfd:
-	db '/proc/self/'
-__hi_were_the_replacements:
-	db 'fd/3',0
 
 
 ; ===========================
@@ -116,16 +105,16 @@ _start:
 	; NOTICE: execution begain in e_padding, follow jumps from there to here
 
 	; forget about argc so rsp points to argv array
-	pop rdx
+	pop rcx
 
 	; move to child or parent
 	jz _child
 
 _parent:
 	; can be edi, will be smaller, but scary...
-	xor rdi, rdi
+	xor edi, edi
 	mov ax, sys_waitid
-	add r10, 4 
+	mov r10b, 4 
 	syscall
 
 	; get environ pointer from stack into rdx
@@ -134,23 +123,19 @@ _parent:
 	add rdx,rsp
 
 	; execve demo 
-	minimov rax, sys_execve
-	minimov	rdi, __memfd
+	mov al, sys_execve
+	mov	edi, __memfd
 	minimov	rsi, rsp ;use our args as args
 	syscall
-
-	; minimov rax, sys_exit
-	; minimov rdi, 420
-	; syscall
-
 
 _child:
 	; Rock'n'rollin' 'til the break of dawn!
 	; Hey, where's Tommy? Someone find Tommy!
-	; mov qword [__hi_were_the_replacements], `exe\x00`
+	mov edi, `exe\x00`
+	mov [rel __hi_were_the_replacements], edi
 
 	; open self 
-	minimov	rdi, __exe
+	mov edi, __memfd
 	mov al, sys_open ;open
 	;these are initialized to zero on start
 	; xor rsi, rsi
@@ -161,33 +146,42 @@ _child:
 	push rax
 
 	;seek
-	minimov rax, sys_lseek ;lseek
+	mov al, sys_lseek ;lseek
 	pop rdi
 	push rdi
-	minimov rsi, filesize
+	mov sil, filesize
 	;these are initialized to zero on start
 	; xor rdx, rdx
 	syscall
 
 	;dup2 demo->stdout
-	minimov rax, sys_dup2
-	minimov rdi, 3
-	minimov rsi, 1 ;1 = stdout
+	mov al, sys_dup2
+	mov dil, 3
+	mov sil, 1 ;1 = stdout
 	syscall
 
 	;dup2 self->stdin
-	minimov rax, sys_dup2
+	mov al, sys_dup2
 	pop rdi
-	xor rsi, rsi ;0 = stdin
+	mov sil, 0 ;0 = stdin
 	syscall
 
 	;execve
-	minimov rax, sys_execve
-	minimov	rdi, __gzip
+	mov al, sys_execve
+	mov	edi, __gzip
 	; use our arguments
 	minimov	rsi, rsp
-	xor rdx, rdx ;empty environ
+	; xor rdx, rdx ;empty environ
 	syscall
 
+; ===========================
+; ========= STRINGS =========
+; ===========================
+
+;replacing the "fd/3" with "exe\0" on the fly saves... 4 bytes
+__memfd:
+	db '/proc/self/'
+__hi_were_the_replacements:
+	db 'fd/3',0
 
 filesize	equ	 $ - $$
