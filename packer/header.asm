@@ -88,7 +88,7 @@ p_vaddr:
 
 p_paddr: ;apparently p_paddr can be nonsense
 	pop rcx ;this is just so we can forget about argc and have rsp point to the start of argv
-	push __memfd
+	push __memfd ;both processes need this pointer so let's put it on the stack so they can get it with a single byte
 
 	jmp _start
 
