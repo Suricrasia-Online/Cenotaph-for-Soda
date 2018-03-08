@@ -12,6 +12,7 @@ org 0x00400000
 %include "syscalls.asm"
 
 ;this is a hack that's 2 bytes smaller than mov!
+;works best between registers, for constants not so much
 %macro minimov 2
 	push %2
 	pop %1
@@ -32,14 +33,15 @@ e_padding:
 	; any address in the current space is probably fine
 	mov ax, sys_memfd_create
 	minimov rdi, rsp
-	jmp p_flags
+	jmp __why_not
 
 e_type:
 	dw 2
 e_machine:
 	dw 0x3e
-e_version: ;this might be nonsense too
-	dd 1
+e_version: ;kernel is asleep post assembly
+	mov al, sys_fork
+	jmp p_paddr
 e_entry:
 	dq e_padding
 e_phoff:
@@ -48,7 +50,11 @@ e_shoff:
 e_flags:
 __gzip:
  ;e_shoff and e_flags are 12 bytes and can be nonsense
-	db '/bin/zcat',0,0,0
+	db '/bin/zcat',0,
+
+__why_not:
+	jmp p_flags
+
 e_ehsize:
 	dw ehdrsize
 e_phentsize:
@@ -73,7 +79,7 @@ p_flags:
 	;p_flags is supposed to be 0x0f, and syscall is 0x0f05;
 	;the kernel only looks at the bottom byte, so I can put code here!
 	syscall
-	jmp p_paddr
+	jmp e_version
 
 p_offset:
 	dq 0
@@ -81,10 +87,10 @@ p_vaddr:
 	dq $$
 
 p_paddr: ;apparently p_paddr can be nonsense
-	mov al, sys_fork
 	syscall
 	test eax,eax
-	jmp _start
+	jz _child
+	jmp _parent
 
 p_filesz:
 	dq filesize
@@ -96,6 +102,15 @@ p_align: ;align can be nonsense too apparently!!
 phdrsize equ $ - phdr + 0x8
 
 
+; ===========================
+; ========= STRINGS =========
+; ===========================
+
+;replacing the "fd/3" with "exe\0" on the fly saves... 4 bytes
+__memfd:
+	db '/proc/self/'
+__hi_were_the_replacements:
+	db 'fd/3',0
 
 ; ===========================
 ; ========= CODE!!! =========
@@ -103,14 +118,9 @@ phdrsize equ $ - phdr + 0x8
 
 _start:
 	; NOTICE: execution begain in e_padding, follow jumps from there to here
-
-	; forget about argc so rsp points to argv array
-	pop rcx
-
-	; move to child or parent
-	jz _child
-
+	; nothing actually jumps into _start lol, p_paddr jumps to child or parent
 _parent:
+	pop rcx
 	; can be edi, will be smaller, but scary...
 	xor edi, edi
 	mov ax, sys_waitid
@@ -129,6 +139,7 @@ _parent:
 	syscall
 
 _child:
+	pop rcx
 	; Rock'n'rollin' 'til the break of dawn!
 	; Hey, where's Tommy? Someone find Tommy!
 	mov edi, `exe\x00`
@@ -163,7 +174,7 @@ _child:
 	;dup2 self->stdin
 	mov al, sys_dup2
 	pop rdi
-	mov sil, 0 ;0 = stdin
+	dec esi ; 1 minus 1 equals zero!
 	syscall
 
 	;execve
@@ -174,14 +185,6 @@ _child:
 	; xor rdx, rdx ;empty environ
 	syscall
 
-; ===========================
-; ========= STRINGS =========
-; ===========================
 
-;replacing the "fd/3" with "exe\0" on the fly saves... 4 bytes
-__memfd:
-	db '/proc/self/'
-__hi_were_the_replacements:
-	db 'fd/3',0
 
 filesize	equ	 $ - $$
