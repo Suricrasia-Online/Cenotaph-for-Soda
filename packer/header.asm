@@ -87,10 +87,10 @@ p_vaddr:
 	dq $$
 
 p_paddr: ;apparently p_paddr can be nonsense
-	syscall
-	test eax,eax
-	jz _child
-	jmp _parent
+	mov ebx, __memfd
+	pop rcx ;this is just so we can forget about argc and have rsp point to the start of argv
+
+	jmp _start
 
 p_filesz:
 	dq filesize
@@ -118,10 +118,13 @@ __hi_were_the_replacements:
 
 _start:
 	; NOTICE: execution begain in e_padding, follow jumps from there to here
-	; nothing actually jumps into _start lol, p_paddr jumps to child or parent
+
+	syscall
+	test eax,eax
+	jz _child
+
 _parent:
-	pop rcx
-	; can be edi, will be smaller, but scary...
+
 	xor edi, edi
 	mov ax, sys_waitid
 	mov r10b, 4 
@@ -134,23 +137,20 @@ _parent:
 
 	; execve demo 
 	mov al, sys_execve
-	mov	edi, __memfd
+	minimov rdi, rbx
 	minimov	rsi, rsp ;use our args as args
 	syscall
 
 _child:
-	pop rcx
+
 	; Rock'n'rollin' 'til the break of dawn!
 	; Hey, where's Tommy? Someone find Tommy!
 	mov edi, `exe\x00`
 	mov [rel __hi_were_the_replacements], edi
 
 	; open self 
-	mov edi, __memfd
+	minimov rdi, rbx
 	mov al, sys_open ;open
-	;these are initialized to zero on start
-	; xor rsi, rsi
-	; xor rdx, rdx
 	syscall
 
 	;fd1
@@ -161,8 +161,6 @@ _child:
 	pop rdi
 	push rdi
 	mov sil, filesize
-	;these are initialized to zero on start
-	; xor rdx, rdx
 	syscall
 
 	;dup2 demo->stdout
