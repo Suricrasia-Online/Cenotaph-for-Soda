@@ -44,10 +44,11 @@ e_entry:
 	dq e_padding
 e_phoff:
 	dq phdr - $$
-e_shoff: ;this might be nonsense too
-	dq 0
-e_flags: ;this might be nonsense too
-	dd 0
+e_shoff:
+e_flags:
+__gzip:
+ ;e_shoff and e_flags are 12 bytes and can be nonsense
+	db '/bin/zcat',0,0,0
 e_ehsize:
 	dw ehdrsize
 e_phentsize:
@@ -105,8 +106,7 @@ __memfd:
 	db '/proc/self/'
 __hi_were_the_replacements:
 	db 'fd/3',0
-__gzip:
-	db '/bin/zcat',0
+
 
 ; ===========================
 ; ========= CODE!!! =========
