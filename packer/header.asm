@@ -29,6 +29,7 @@ e_ident:
 
 e_padding:
 	pop rcx ;this is just so we can forget about argc and have rsp point to the start of argv
+
 	; here we are setting the values for the memfd_create syscall
 	; passing "rsp" as the name to the kernel. the name doesn't matter but it cannot be null
 	; any address in the current space is probably fine
@@ -118,6 +119,14 @@ _parent:
 	mov al, sys_waitid
 	mov r10b, 4
 	syscall
+
+%ifdef CLOSE_ON_EXEC
+	mov al, sys_fcntl
+	mov dil, 3
+	mov sil, 2
+	inc edx
+	syscall
+%endif
 
 	; gets pointer to __memfd from stack
 	pop rdi
