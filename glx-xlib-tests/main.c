@@ -10,7 +10,7 @@
 #include<GL/glu.h>
 
 #include "shader.h"
-// #define DEBUG true
+#define DEBUG true
 
 static inline void swap(GLuint* t1, GLuint* t2) {
     GLuint temp = *t1;
@@ -36,6 +36,12 @@ glRecti(-1,-1,1,1);
 __attribute__((force_align_arg_pointer))
 void glLinkProgram__ALIGNED(GLuint p) {
     glLinkProgram(p);
+}
+
+
+__attribute__((force_align_arg_pointer))
+void glXMakeCurrent__ALIGNED(Display* dpy, Window win, GLXContext glc) {
+    glXMakeCurrent(dpy, win, glc);
 }
 
 void _start() {
@@ -73,7 +79,7 @@ if (glc == NULL) {
   return;
 }
 
-glXMakeCurrent(dpy, win, glc);
+glXMakeCurrent__ALIGNED(dpy, win, glc);
 
 
 
@@ -198,7 +204,7 @@ glClear(GL_COLOR_BUFFER_BIT);
 // glBindFramebuffer(GL_FRAMEBUFFER, 0);
 // glBindFramebuffer(GL_FRAMEBUFFER, fboA);
 
-for (int x = 0; x < 100; x++) {
+for (int x = 0; x < 99; x++) {
   render(p, fboA, textureB, x);
   swap(&fboA, &fboB);
   swap(&textureA, &textureB);

@@ -25,7 +25,7 @@ org 0x00400000
 ehdr: ; Elf64_Ehdr
 
 e_ident:
-	db 0x7F, "ELF", 2, 1, 1, 0
+	db 0x7F, "ELF", 2, 1, 1
 
 e_padding:
 	; here we are setting the values for the memfd_create syscall
@@ -33,7 +33,8 @@ e_padding:
 	; any address in the current space is probably fine
 	mov ax, sys_memfd_create
 	minimov rdi, rsp
-	jmp __why_not
+	jmp p_flags
+	nop
 
 e_type:
 	dw 2
@@ -52,12 +53,12 @@ e_flags:
 __gzip:
  ;e_shoff and e_flags are 12 bytes and can be nonsense
 	db '/bin/zcat',0,
-
-__why_not:
-	jmp p_flags
+	nop
+	nop
 
 e_ehsize:
-	dw ehdrsize
+	nop
+	nop
 e_phentsize:
 	dw phdrsize
 
@@ -122,7 +123,7 @@ _parent:
 	; wait for child
 	xor edi, edi
 	mov ax, sys_waitid
-	mov r10b, 4 
+	mov r10b, 4
 	syscall
 
 	; gets pointer to __memfd from stack
