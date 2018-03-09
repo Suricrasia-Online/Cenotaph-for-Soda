@@ -28,13 +28,13 @@ e_ident:
 	db 0x7F, "ELF", 2, 1, 1
 
 e_padding:
+	pop rcx ;this is just so we can forget about argc and have rsp point to the start of argv
 	; here we are setting the values for the memfd_create syscall
 	; passing "rsp" as the name to the kernel. the name doesn't matter but it cannot be null
 	; any address in the current space is probably fine
 	mov ax, sys_memfd_create
 	minimov rdi, rsp
 	jmp p_flags
-	nop
 
 e_type:
 	dw 2
@@ -53,12 +53,10 @@ e_flags:
 __gzip:
  ;e_shoff and e_flags are 12 bytes and can be nonsense
 	db '/bin/zcat',0,
-	nop
-	nop
-
+__more_code:
+	jz _child
 e_ehsize:
-	nop
-	nop
+	jmp _parent
 e_phentsize:
 	dw phdrsize
 
@@ -89,21 +87,18 @@ p_vaddr:
 	dq $$
 
 p_paddr: ;apparently p_paddr can be nonsense
-	pop rcx ;this is just so we can forget about argc and have rsp point to the start of argv
 	push __memfd ;both processes need this pointer so let's put it on the stack so they can get it with a single byte
 
 	syscall
 
-p_filesz:
+p_filesz: ;actually p_filesz starts 1 byte into the cmpxchg instruction
 	; this stuff can have code but it can't be bigger than about 4 bytes
-	test eax, eax
-	jmp _start
+	cmpxchg ebx, eax ;by doing the compare this way we can zero eax in three bytes, so in the parent we can do a 2 byte "mov al, sys_call" compared to a 4 byte "mov ax, sys_call. saves a byte :3
+	jmp __more_code
 	db 0,0,0,0
 p_memsz:
 	; must be equal to p_filesz
-	test eax, eax
-	jmp _start + 8
-	db 0,0,0,0
+	db 0xB1,0xC3,0xEB,0xD6,0x00,0x00,0x00,0x00
 p_align: ;align can be nonsense too apparently!!
 	; dq 0x10
 
@@ -117,12 +112,10 @@ phdrsize equ $ - phdr + 0x8
 _start:
 	; NOTICE: execution begain in e_padding, follow jumps from there to here
 
-	jz _child
-
 _parent:
 	; wait for child
 	xor edi, edi
-	mov ax, sys_waitid
+	mov al, sys_waitid
 	mov r10b, 4
 	syscall
 
