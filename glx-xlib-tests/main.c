@@ -197,10 +197,11 @@ glClear(GL_COLOR_BUFFER_BIT);
 // glBindFramebuffer(GL_FRAMEBUFFER, 0);
 // glBindFramebuffer(GL_FRAMEBUFFER, fboA);
 
-for (int x = 0; x < 99; x++) {
+for (int x = 0; x < 50; x++) {
   render(p, fboA, textureB, x);
-  swap(&fboA, &fboB);
-  swap(&textureA, &textureB);
+  render(p, fboB, textureA, x);
+  // swap(&fboA, &fboB);
+  // swap(&textureA, &textureB);
 }
 
 

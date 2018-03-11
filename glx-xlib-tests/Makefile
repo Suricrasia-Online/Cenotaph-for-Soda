@@ -3,11 +3,11 @@ all : main_packed
 
 shader.frag.min : shader.frag Makefile
 	cp shader.frag shader.frag.min
-	sed -i 's/m_origin/o/' shader.frag.min
-	sed -i 's/m_direction/d/' shader.frag.min
-	sed -i 's/m_point/k/' shader.frag.min
-	sed -i 's/m_intersected/i/' shader.frag.min
-	sed -i 's/m_color/c/' shader.frag.min
+	sed -i 's/m_origin/o/g' shader.frag.min
+	sed -i 's/m_direction/d/g' shader.frag.min
+	sed -i 's/m_point/k/g' shader.frag.min
+	sed -i 's/m_intersected/i/g' shader.frag.min
+	sed -i 's/m_color/c/g' shader.frag.min
 
 shader.h : shader.frag.min Makefile
 	mono ~/Downloads/shader_minifier.exe --preserve-externals shader.frag.min -o shader.h
