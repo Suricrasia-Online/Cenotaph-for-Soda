@@ -34,16 +34,6 @@ glRecti(-1,-1,1,1);
 }
 
 __attribute__((force_align_arg_pointer))
-void glLinkProgram__ALIGNED(GLuint p) {
-    glLinkProgram(p);
-}
-
-
-__attribute__((force_align_arg_pointer))
-void glXMakeCurrent__ALIGNED(Display* dpy, Window win, GLXContext glc) {
-    glXMakeCurrent(dpy, win, glc);
-}
-
 void _start() {
 
 Display* dpy = XOpenDisplay(NULL);
@@ -75,11 +65,14 @@ Window win = XCreateWindow(dpy, root, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, 0, vi->
 
 // XStoreName(dpy, win, "Shark Girls Rule The World");
 GLXContext glc = glXCreateContext(dpy, vi, NULL, 1);
+
+#ifdef DEBUG
 if (glc == NULL) {
   return;
 }
+#endif
 
-glXMakeCurrent__ALIGNED(dpy, win, glc);
+glXMakeCurrent(dpy, win, glc);
 
 
 
@@ -147,7 +140,7 @@ exit(-10);
   GLuint p = glCreateProgram();
   glAttachShader(p,f);
  
-  glLinkProgram__ALIGNED(p);
+  glLinkProgram(p);
 
 #ifdef DEBUG
   GLint isLinked = 0;
