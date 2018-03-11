@@ -10,7 +10,7 @@
 #include<GL/glu.h>
 
 #include "shader.h"
-#define DEBUG true
+// #define DEBUG true
 
 static inline void swap(GLuint* t1, GLuint* t2) {
     GLuint temp = *t1;
@@ -118,7 +118,7 @@ glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
   GL_TEXTURE_2D, textureB, 0);
 
 GLuint f = glCreateShader(GL_FRAGMENT_SHADER);
-glShaderSource(f, 1, &shader_frag, NULL);
+glShaderSource(f, 1, &shader_frag_min, NULL);
 glCompileShader(f);
 
 #ifdef DEBUG

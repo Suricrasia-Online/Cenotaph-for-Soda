@@ -35,7 +35,7 @@ vec3 circleTextureComponent(vec2 point, vec2 grid) {
 	feed(state, grid.x);
 	feed(state, grid.y);
 
-	float width = getFloat(state)+1.0;
+	float width = getFloat(state);
 	float x_offset = getFloat(state);
 	float y_offset = getFloat(state);
 	vec2 midpoint = grid + vec2(x_offset, y_offset);
@@ -70,11 +70,11 @@ vec3 circleTexture(vec2 point) {
 //note to self: the shader minifier doesn't minify struct members
 struct Ray
 {
-  vec3 origin;
-  vec3 direction;
-  vec3 point;
-  bool intersected;
-  vec3 color;
+  vec3 m_origin;
+  vec3 m_direction;
+  vec3 m_point;
+  bool m_intersected;
+  vec3 m_color;
 };
 
 float smin( float a, float b, float k )
@@ -108,38 +108,38 @@ Ray newRay(vec3 origin, vec3 direction) {
 
 Ray castRay(Ray ray) {
 	// Cast ray from origin into scene
-#if 0
-	float relaxation = 1.4;
-	float lastDist = 0.0;
-	vec3 fallback = ray.point;
-#endif
-	for (int i = 0; i < 100; i++) {
-		float dist = scene(ray.point);
 
-#if 0
-		if (relaxation > 1.0 && dist + lastDist < lastDist * relaxation) {
-			ray.point = fallback;
-			dist = lastDist;
-			relaxation = 1.0;
-		}
-#endif
+	// float relaxation = 1.4;
+	// float lastDist = 0.0;
+	// vec3 fallback = ray.m_point;
+
+	for (int i = 0; i < 100; i++) {
+		float dist = scene(ray.m_point);
+
+
+		// if (relaxation > 1.0 && dist + lastDist < lastDist * relaxation) {
+		// 	ray.m_point = fallback;
+		// 	dist = lastDist;
+		// 	relaxation = 1.0;
+		// }
+
 		
 		if (abs(dist) < EPSI) {
-			ray.intersected = true;
+			ray.m_intersected = true;
 			break;
 		}
 
-		if (distance(ray.point, ray.origin) > 10.0) {
+		if (distance(ray.m_point, ray.m_origin) > 10.0) {
 			break;
 		}
 
-#if 0
-		lastDist = dist;
-		fallback = ray.point;
-		ray.point += relaxation * dist * ray.direction;
-#else
-		ray.point += dist * ray.direction;
-#endif
+
+		// lastDist = dist;
+		// fallback = ray.m_point;
+		// ray.m_point += relaxation * dist * ray.m_direction;
+
+		ray.m_point += dist * ray.m_direction;
+
 	}
 	return ray;
 }
@@ -175,9 +175,9 @@ void main() {
 	ray = castRay(ray);
 
 	vec3 color = ORIGIN;
-	if (ray.intersected) {
-		color = circleTexture(ray.point.yz *5.);
-		// color += clamp(-(sceneGrad(ray.point).x + sceneGrad(ray.point).z)/2.0, 0.0, 1.0);
+	if (ray.m_intersected) {
+		color = circleTexture(ray.m_point.yz *5.);
+		// color += clamp(-(sceneGrad(ray.m_point).x + sceneGrad(ray.m_point).z)/2.0, 0.0, 1.0);
 	}
 	fragColor = vec4(color,1.0)*0.01;
 	// fragColor = vec4(uv,0.0,1.0);

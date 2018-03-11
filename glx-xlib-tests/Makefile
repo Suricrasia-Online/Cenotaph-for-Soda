@@ -1,8 +1,16 @@
 
 all : main_packed
 
-shader.h : shader.frag Makefile
-	mono ~/Downloads/shader_minifier.exe --preserve-externals shader.frag -o shader.h
+shader.frag.min : shader.frag Makefile
+	cp shader.frag shader.frag.min
+	sed -i 's/m_origin/o/' shader.frag.min
+	sed -i 's/m_direction/d/' shader.frag.min
+	sed -i 's/m_point/k/' shader.frag.min
+	sed -i 's/m_intersected/i/' shader.frag.min
+	sed -i 's/m_color/c/' shader.frag.min
+
+shader.h : shader.frag.min Makefile
+	mono ~/Downloads/shader_minifier.exe --preserve-externals shader.frag.min -o shader.h
 
 main : main.c shader.h Makefile
 	gcc -o main main.c -lX11 -lGL -lGLU -O0 -std=gnu11 -nostartfiles
