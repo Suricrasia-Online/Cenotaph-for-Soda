@@ -88,10 +88,14 @@ float ball(vec3 point, vec3 origin, float radius) {
 }
 
 float scene(vec3 point) {
-	return smin(smin(
-	ball(point, vec3(0.0,0.8,0.3), 0.7),
-	ball(point, vec3(0.0,-0.8,0.3), 0.7), 0.1),
-	ball(point, vec3(0.0, 0.0, -0.7), 1.0), 0.1);
+	vec3 rep = point;
+	rep.z = mod(rep.z, 3.0) - 1.9;
+	rep.y = mod(rep.y, 3.5) - 1.6;
+	return min(smin(smin(
+	ball(rep, vec3(0.0,0.8,0.3), 0.7),
+	ball(rep, vec3(0.0,-0.8,0.3), 0.7), 0.1),
+	ball(rep, vec3(0.0, 0.0, -0.7), 1.0), 0.1),
+	point.x + 1.0);
 }
 
 vec3 sceneGrad(vec3 point) {
@@ -106,42 +110,39 @@ Ray newRay(vec3 origin, vec3 direction) {
  	return Ray(origin, direction, origin, false, ORIGIN);
 }
 
-Ray castRay(Ray ray) {
+void castRay(inout Ray ray) {
 	// Cast ray from origin into scene
 
-	// float relaxation = 1.4;
-	// float lastDist = 0.0;
-	// vec3 fallback = ray.m_point;
+	for (int i = 0; i < 50; i++) {
+		if (distance(ray.m_point, ray.m_origin) > 50.0) {
+			break;
+		}
 
-	for (int i = 0; i < 100; i++) {
 		float dist = scene(ray.m_point);
 
-
-		// if (relaxation > 1.0 && dist + lastDist < lastDist * relaxation) {
-		// 	ray.m_point = fallback;
-		// 	dist = lastDist;
-		// 	relaxation = 1.0;
-		// }
-
-		
 		if (abs(dist) < EPSI) {
 			ray.m_intersected = true;
 			break;
 		}
 
-		if (distance(ray.m_point, ray.m_origin) > 10.0) {
-			break;
-		}
-
-
-		// lastDist = dist;
-		// fallback = ray.m_point;
-		// ray.m_point += relaxation * dist * ray.m_direction;
-
 		ray.m_point += dist * ray.m_direction;
-
 	}
-	return ray;
+}
+
+vec3 shadeRay(inout Ray ray) {
+	castRay(ray);
+	if (ray.m_intersected) {
+		vec3 normal = -sceneGrad(ray.m_point);
+		Ray shadow = newRay(ray.m_point + normal*EPSI*4.0, VECTOR_X);
+		castRay(shadow);
+		if (!shadow.m_intersected) {
+			float diffuse = max(dot(normal, VECTOR_X),0.0);
+			vec3 reflected = reflect(ray.m_direction, normal);
+			float specular = pow(max(dot(reflected, VECTOR_X), 0.0), 10.0);
+			return vec3(diffuse * 0.5 + specular * 0.5);
+		}
+	}
+	return vec3(0.0);
 }
 
 void main() {
@@ -157,7 +158,7 @@ void main() {
 	float randomY = getFloat(state);
 
 	// Camera parameters
-	vec3 cameraOrigin = vec3(8.0, 0.0, 0.0);
+	vec3 cameraOrigin = vec3(16.0, 0.0, 0.0);
 	vec3 cameraDirection = normalize(vec3(-1.0, 0.0, 0.0));
 
 	// Generate plate axes with Z-up. will break if pointed straight up
@@ -165,21 +166,21 @@ void main() {
 	vec3 plateXAxis = normalize(cross(cameraDirection, vec3(0.0,0.0,1.0)));
 	vec3 plateYAxis = normalize(cross(cameraDirection, plateXAxis));
 
-	float fov = radians(60.0);
+	float fov = radians(70.0);
 	vec2 plateCoords = (uv * 2.0 - 1.0) * vec2(1.0, 1080.0/1920.0) + vec2(randomX, randomY) * 2.0/1080.0;
 	vec3 platePoint = (plateXAxis * plateCoords.x + plateYAxis * -plateCoords.y) * tan(fov /2.0);
 
 	vec3 rayDirection = normalize(platePoint + cameraDirection);
 
 	Ray ray = newRay(cameraOrigin, rayDirection);
-	ray = castRay(ray);
 
 	vec3 color = ORIGIN;
-	if (ray.m_intersected) {
-		color = circleTexture(ray.m_point.yz *5.);
-		// color += clamp(-(sceneGrad(ray.m_point).x + sceneGrad(ray.m_point).z)/2.0, 0.0, 1.0);
-	}
-	fragColor = vec4(color,1.0)*0.01;
+	color += shadeRay(ray);
+	// if (ray.m_intersected) {
+	// 	// color = circleTexture(ray.m_point.yz *5.);
+	// 	color += clamp(abs(sceneGrad(ray.m_point).x + sceneGrad(ray.m_point).z)/2.0, 0.0, 1.0);
+	// }
+	fragColor = vec4(color,1.0)*0.02;
 	// fragColor = vec4(uv,0.0,1.0);
 
 	fragColor += texture2D(canvas, uv);

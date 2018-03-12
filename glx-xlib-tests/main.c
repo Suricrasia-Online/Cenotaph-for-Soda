@@ -10,7 +10,7 @@
 #include<GL/glu.h>
 
 #include "shader.h"
-// #define DEBUG true
+#define DEBUG true
 
 static inline void swap(GLuint* t1, GLuint* t2) {
     GLuint temp = *t1;
@@ -197,9 +197,9 @@ glClear(GL_COLOR_BUFFER_BIT);
 // glBindFramebuffer(GL_FRAMEBUFFER, 0);
 // glBindFramebuffer(GL_FRAMEBUFFER, fboA);
 
-for (int x = 0; x < 50; x++) {
-  render(p, fboA, textureB, x);
-  render(p, fboB, textureA, x);
+for (int x = 0; x < 25; x++) {
+  render(p, fboA, textureB, x*2);
+  render(p, fboB, textureA, x*2+1);
   // swap(&fboA, &fboB);
   // swap(&textureA, &textureB);
 }
@@ -231,14 +231,17 @@ printf("\n");
 // exit(0);
 #endif
 
-glBindFramebuffer(GL_FRAMEBUFFER, 0);
-// glViewport(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-glActiveTexture(GL_TEXTURE0);
-glBindTexture(GL_TEXTURE_2D, textureB);
-glUniform1i(0, 0);
-glUniform1i(1, 0);
+// glBindFramebuffer(GL_FRAMEBUFFER, 0);
+// // glViewport(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+// glActiveTexture(GL_TEXTURE0);
+// glBindTexture(GL_TEXTURE_2D, textureB);
+// glUniform1i(0, 0);
+// glUniform1i(1, 0);
 
-glRecti(-1,-1,1,1);
+
+render(p, 0, textureB, 6969);
+
+// glRecti(-1,-1,1,1);
 glXSwapBuffers(dpy, win);
 
 
