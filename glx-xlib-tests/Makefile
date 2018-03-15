@@ -10,11 +10,13 @@ shader.frag.min : shader.frag curvedist.frag Makefile
 	sed -i 's/m_intersected/i/g' shader.frag.min
 	sed -i 's/m_color/c/g' shader.frag.min
 	sed -i 's/m_mat/m/g' shader.frag.min
-	sed -i 's/m_diffuse/d/g' shader.frag.min
-	sed -i 's/m_specular/k/g' shader.frag.min
-	sed -i 's/m_spec_exp/y/g' shader.frag.min
-	sed -i 's/m_reflectance/o/g' shader.frag.min
-	sed -i 's/m_transparency/i/g' shader.frag.min
+	sed -i 's/m_cumdist/y/g' shader.frag.min
+
+	sed -i 's/m_diffuse/o/g' shader.frag.min
+	sed -i 's/m_specular/d/g' shader.frag.min
+	sed -i 's/m_spec_exp/k/g' shader.frag.min
+	sed -i 's/m_reflectance/i/g' shader.frag.min
+	sed -i 's/m_transparency/c/g' shader.frag.min
 
 shader.h : shader.frag.min Makefile
 	mono ~/Downloads/shader_minifier.exe --preserve-externals shader.frag.min -o shader.h
@@ -23,6 +25,7 @@ main : main.c shader.h Makefile
 	gcc -o main main.c -lX11 -lGL -lGLU -O0 -std=gnu11 -nostartfiles
 	strip main
 	strip -R .note -R .comment -R .eh_frame -R .eh_frame_hdr -R .note.gnu.build-id main
+	truncate --size=-1072 main
 	wc -c main
 
 main_packed : main ../packer/header Makefile

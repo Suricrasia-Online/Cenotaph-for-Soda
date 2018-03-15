@@ -1,0 +1,5 @@
+todo: 
+[ ] set 1920x1080 video mode
+[ ] make the soda bottle look more like a soda bottle
+[ ] gamma correct rendering
+[ ] random positioning

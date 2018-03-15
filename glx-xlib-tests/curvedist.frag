@@ -32,6 +32,7 @@ struct Ray
   bool m_intersected;
   int m_mat;
   vec3 m_color;
+  float m_cumdist;
 };
     
 struct Mat
@@ -44,61 +45,57 @@ struct Mat
 };
 
 Mat mats[3] = Mat[3](
-    Mat(vec3(0.6, 0.5, 0.1), vec3(0.5), 5.0, vec3(0.1), vec3(0.1)),
-    Mat(vec3(0.4, 0.5, 0.5), vec3(0.5), 25.0, vec3(0.4), vec3(0.4, 0.5, 0.5)),
-    Mat(vec3(0.8, 0.8, 0.8), vec3(0.5), 10.0, vec3(0.1), vec3(0.01))
+    Mat(vec3(0.6, 0.5, 0.1), vec3(0.5), 5.0, vec3(0.1), vec3(0.1)), //label
+    Mat(vec3(0.4, 0.5, 0.5), vec3(0.5), 25.0, vec3(0.4), vec3(0.4, 0.5, 0.5)), //bottle
+    Mat(vec3(0.9, 0.9, 0.9), vec3(0.5), 10.0, vec3(0.1), vec3(0.01)) //cap
 );
 
-
-#define NUMPARAMS 4
-vec2 params[5] = vec2[5](
-    vec2(0.0,0.0), vec2(0.02,0.1), vec2(0.0,-0.05), vec2(0.0,-0.05), vec2(-0.01,-0.0)//,
+vec2 params[3] = vec2[3](
+    vec2(0.02,-0.1), vec2(0.0,0.05), vec2(0.0,0.05)//, vec2(-0.01,-0.0)//,
     //vec2(-0.01,0.0), vec2(-0.01,0.005), vec2(0.0,0.005), vec2(0.0,-0.005), vec2(-0.0,0.005)
 );
 
 vec2 cmpxi = vec2(0.0, 1.0);
-vec2 cmpxcnj(vec2 c) {
-    return vec2(c.x, -c.y);
-}
 
 vec2 cmpxmul(vec2 a, vec2 b) {
-    return vec2(dot(cmpxcnj(a), cmpxcnj(b)), dot(a, b.yx));
+    return vec2(a.x*b.x - a.y*b.y, a.y*b.x + a.x*b.y);
 }
 
 vec2 cmpxexp(vec2 c) {
     return exp(c.x) * vec2(cos(c.y), sin(c.y));
 }
+
 float cmpxabs(vec2 c) {
     return distance(vec2(0.0), c);
 }
 
 float curve(float x) {
     vec2 val = vec2(0.0);
-    for (int n = 0; n < NUMPARAMS; n++) {
-        val += cmpxmul(params[n], cmpxexp(cmpxi*float(n)*x));
+    for (int n = 0; n < 3; n++) {
+        val += cmpxmul(params[n], cmpxexp(cmpxi*float(n+1)*x));
     }
     return val.x;
 }
 
 float curvedx(float x) {
     vec2 val = vec2(0.0);
-    for (int n = 0; n < NUMPARAMS; n++) {
-        val += cmpxmul(cmpxmul(cmpxi, params[n] * float(n)), cmpxexp(cmpxi*float(n)*x));
+    for (int n = 0; n < 3; n++) {
+        val += cmpxmul(cmpxmul(cmpxi, params[n] * float(n+1)), cmpxexp(cmpxi*float(n+1)*x));
     }
     return val.x;
 }
 
-float curveddx(float x) {
-    vec2 val = vec2(0.0);
-    for (int n = 0; n < NUMPARAMS; n++) {
-        val += cmpxmul(params[n] * float(n*n), -cmpxexp(cmpxi*float(n)*x));
-    }
-    return val.x;
-}
+// float curveddx(float x) {
+//     vec2 val = vec2(0.0);
+//     for (int n = 0; n < NUMPARAMS; n++) {
+//         val += cmpxmul(params[n] * float(n*n), -cmpxexp(cmpxi*float(n)*x));
+//     }
+//     return val.x;
+// }
 
 float curvemax() {
     float val = 0.0;
-    for (int n = 0; n < NUMPARAMS; n++) {
+    for (int n = 0; n < 3; n++) {
         val += cmpxabs(params[n]);
     }
     return val;
@@ -147,14 +144,6 @@ float distanceToCurve(vec2 point) {
     return secondOrder;*/
 }
 
-float maxx(float a, float b, float c) {
-    return max(max(a, b), c);
-}
-
-float minn(float a, float b, float c) {
-    return min(min(a, b), c);
-}
-
 float smin( float a, float b, float k )
 {
     if (k == 0.0) return min(a,b);
@@ -164,7 +153,7 @@ float smin( float a, float b, float k )
 
 float unitSquare(vec3 point) {
     vec3 ptabs = abs(point);
-    return maxx(ptabs.x, ptabs.y, ptabs.z) - 1.0;
+    return max(max(ptabs.x, ptabs.y), ptabs.z) - 1.0;
 }
 
 float unitSquareFrame(vec3 point) {
@@ -173,7 +162,7 @@ float unitSquareFrame(vec3 point) {
     float sq1 = unitSquare(point * mult.xyy);
     float sq2 = unitSquare(point * mult.yxy);
     float sq3 = unitSquare(point * mult.yyx);
-    float inner = minn(sq1, sq2, sq3);
+    float inner = min(min(sq1, sq2), sq3);
     return max(sqmain,-inner);
 }
 
@@ -217,7 +206,7 @@ vec2 bottle(vec3 point) {
     }
     
     //blackle were you raised in a barn? fix this shit!
-    vec3 origin = vec3(0.0,0.0,0.0);
+    vec3 origin = vec3(0.0);
     float dist = distance(point.xy, origin.xy);
     float top = point.z;
 
@@ -256,51 +245,65 @@ vec2 scene(vec3 point) {
     return s;//matUnion(vec2(unitSquareFrame(point), 2.0), s);
 }
 
-#define EPSI 0.001
 vec3 sceneGrad(vec3 point) {
-  float x = (scene(point).x - scene(point + vec3(EPSI,0.0,0.0)).x);
-  float y = (scene(point).x - scene(point + vec3(0.0,EPSI,0.0)).x);
-  float z = (scene(point).x - scene(point + vec3(0.0,0.0,EPSI)).x);
+    float t = scene(point).x;
+  float x = (t - scene(point + vec3(0.001,0.0,0.0)).x);
+  float y = (t - scene(point + vec3(0.0,0.001,0.0)).x);
+  float z = (t - scene(point + vec3(0.0,0.0,0.001)).x);
   return normalize(vec3(x,y,z));
 }
 
-Ray newRay(vec3 origin, vec3 direction) {
+Ray newRay(vec3 origin, vec3 direction, float cumdist) {
     // Create a default ray
-  return Ray(origin, direction, origin, false, -1, vec3(0.0,0.0,0.0));
+  return Ray(origin, direction, origin, false, -1, vec3(0.0), cumdist);
+}
+
+float eps4dist(float dist) {
+    return 0.0005*dist;
 }
 
 void castRay(inout Ray ray) {
     // Cast ray from origin into scene
     for (int i = 0; i < 100; i++) {
-        if (distance(ray.m_point, ray.m_origin) > 20.0) {
+        float dist = distance(ray.m_point, ray.m_origin) + ray.m_cumdist;
+        if (dist > 20.0) {
             break;
         }
 
         vec2 smpl = scene(ray.m_point);
-        float dist = smpl.x;
+        float res = smpl.x;
         
-        if (abs(dist) < EPSI) {
+        if (abs(res) < eps4dist(dist)) {
             ray.m_intersected = true;
             ray.m_mat = int(smpl.y);
+            ray.m_cumdist += dist;
             break;
         }
         
-        ray.m_point += dist * ray.m_direction;
+        ray.m_point += res * ray.m_direction;
     }
 }
 
 void phongShadeRay(inout Ray ray) {
-    if (ray.m_intersected) {
-        Mat mat = mats[ray.m_mat];
+    vec3 lightdirs[3] = vec3[3](vec3(-1.0, -1.0, 1.0), vec3(1.0, -1.0, -1.0), vec3(-1.0, 1.0, -1.0));
+    vec3 lightcols[3] = vec3[3](vec3(2.0, 2.0, 1.0), vec3(0.5, 1.0, 1.0), vec3(1.0, 0.5, 1.0));
+    // vec3 lightDirection = normalize(vec3(-1.0,-1.0,0.0));
+    for (int i = 0; i < 3; i++) {
+        vec3 lightDirection = normalize(lightdirs[i]);
+        if (ray.m_intersected) {
+            Mat mat = mats[ray.m_mat];
 
-        vec3 lightDirection = vec3(-1.0,0.0,0.0);
-        vec3 normal = -sceneGrad(ray.m_point);
-        vec3 reflected = reflect(lightDirection, normal);
-        float diffuse = max(dot(lightDirection, normal), 0.0);
-        float specular = pow(max(dot(ray.m_direction, reflected), 0.0), mat.m_spec_exp);
-  
-        
-        ray.m_color = mat.m_diffuse * (diffuse + 0.1) + mat.m_specular * specular;
+            vec3 normal = -sceneGrad(ray.m_point);
+
+            vec3 reflected = reflect(lightDirection, normal);
+            float diffuse = max(dot(lightDirection, normal), 0.0);
+            float specular = pow(max(dot(ray.m_direction, reflected), 0.0), mat.m_spec_exp);
+      
+            
+            ray.m_color += (mat.m_diffuse * (diffuse + 0.1) + mat.m_specular * specular)*lightcols[i];
+        } else {
+            ray.m_color += vec3(pow(max(dot(lightDirection, ray.m_direction), 0.0), 25.0))*lightcols[i];
+        }
     }
 }
 
@@ -313,7 +316,7 @@ void reflectiveShadeRay(inout Ray ray, float sgn) {
         float frensel = abs(dot(ray.m_direction, normal));
         vec3 reflected = reflect(ray.m_direction, normal);
 
-        Ray bounce = newRay(ray.m_point + normal*0.01*sgn, reflected);
+        Ray bounce = newRay(ray.m_point + normal*eps4dist(ray.m_cumdist)*4.0*sgn, reflected, ray.m_cumdist);
         castRay(bounce);
         phongShadeRay(bounce);
 
@@ -330,18 +333,19 @@ void recursiveShadeRay(inout Ray ray) {
         vec3 normal = -sceneGrad(ray.m_point);
         float frensel = abs(dot(ray.m_direction, normal));
 
-        Ray trans = newRay(ray.m_point - normal*0.01, -ray.m_direction);
+        Ray trans = newRay(ray.m_point - normal*eps4dist(ray.m_cumdist)*4.0, -ray.m_direction, ray.m_cumdist);
         castRay(trans);
         reflectiveShadeRay(trans, -1.0);
-        
-        Ray trans2 = newRay(trans.m_point + ray.m_direction*0.01, ray.m_direction);
-        castRay(trans2);
-        reflectiveShadeRay(trans2, 1.0);
         
         Mat matt = mats[trans.m_mat];
         
         vec3 normal2 = -sceneGrad(trans.m_point);
         float frensel2 = abs(dot(ray.m_direction, normal2));
+
+        Ray trans2 = newRay(trans.m_point + ray.m_direction*eps4dist(trans.m_cumdist)*4.0, ray.m_direction, trans.m_cumdist);
+        castRay(trans2);
+        reflectiveShadeRay(trans2, 1.0);
+        
         
         trans.m_color += trans2.m_color * matt.m_transparency * frensel2;
         ray.m_color += trans.m_color * mat.m_transparency * frensel;
@@ -368,25 +372,23 @@ void main() {
     vec3 plateYAxis = normalize(cross(cameraDirection, plateXAxis));
 
     //DOF with focal point at origin
-    vec2 blur = (vec2(getFloat(state)+getFloat(state), getFloat(state)+getFloat(state)) - vec2(1.0))*0.05 * vec2(1.0, 1080.0/1920.0);
+    vec2 blur = (vec2(getFloat(state)+getFloat(state), getFloat(state)+getFloat(state)) - vec2(1.0))*0.1 * vec2(1.0, 1080.0/1920.0);
     cameraOrigin += plateXAxis*blur.x + plateYAxis*blur.y;
     cameraDirection = normalize(vec3(0.0)-cameraOrigin);
     plateXAxis = normalize(cross(cameraDirection, up));
     plateYAxis = normalize(cross(cameraDirection, plateXAxis));
     
-    float fov = radians(40.0);
+    float fov = radians(50.0);
     vec2 plateCoords = (uv * 2.0 - 1.0) * vec2(1.0, 1080.0/1920.0) + vec2(getFloat(state), getFloat(state)) * 2.0/1080.0;
     vec3 platePoint = (plateXAxis * plateCoords.x + plateYAxis * -plateCoords.y) * tan(fov /2.0);
 
     vec3 rayDirection = normalize(platePoint + cameraDirection);
 
-    Ray ray = newRay(cameraOrigin, rayDirection);
-
-    Ray ray = newRay(cameraOrigin, rayDirection);
+    Ray ray = newRay(cameraOrigin, rayDirection, 0.0);
     castRay(ray);
     recursiveShadeRay(ray);
     
-    fragColor = vec4(ray.m_color, 1.0)*0.05;
+    fragColor = vec4(ray.m_color, 1.0)*(1./3.);
 
     fragColor += texture2D(canvas, uv);
 }

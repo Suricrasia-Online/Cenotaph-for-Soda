@@ -10,7 +10,7 @@
 #include<GL/glu.h>
 
 #include "shader.h"
-//#define DEBUG true
+#define DEBUG true
 
 static inline void swap(GLuint* t1, GLuint* t2) {
     GLuint temp = *t1;
@@ -197,9 +197,12 @@ glClear(GL_COLOR_BUFFER_BIT);
 // glBindFramebuffer(GL_FRAMEBUFFER, 0);
 // glBindFramebuffer(GL_FRAMEBUFFER, fboA);
 
-for (int x = 0; x < 5; x++) {
+glFinish();
+for (int x = 0; x < 1; x++) {
   render(p, fboA, textureB, x*2);
+  glFinish();
   render(p, fboB, textureA, x*2+1);
+  glFinish();
   // swap(&fboA, &fboB);
   // swap(&textureA, &textureB);
 }
@@ -240,10 +243,10 @@ printf("\n");
 
 
 render(p, 0, textureB, 6969);
+glFinish();
 
 // glRecti(-1,-1,1,1);
 glXSwapBuffers(dpy, win);
-
 
 while(1) {
   XEvent xev;
