@@ -1,13 +1,20 @@
 
 all : main_packed
 
-shader.frag.min : shader.frag Makefile
+shader.frag.min : shader.frag curvedist.frag Makefile
 	cp shader.frag shader.frag.min
+	cp curvedist.frag shader.frag.min
 	sed -i 's/m_origin/o/g' shader.frag.min
 	sed -i 's/m_direction/d/g' shader.frag.min
 	sed -i 's/m_point/k/g' shader.frag.min
 	sed -i 's/m_intersected/i/g' shader.frag.min
 	sed -i 's/m_color/c/g' shader.frag.min
+	sed -i 's/m_mat/m/g' shader.frag.min
+	sed -i 's/m_diffuse/d/g' shader.frag.min
+	sed -i 's/m_specular/k/g' shader.frag.min
+	sed -i 's/m_spec_exp/y/g' shader.frag.min
+	sed -i 's/m_reflectance/o/g' shader.frag.min
+	sed -i 's/m_transparency/i/g' shader.frag.min
 
 shader.h : shader.frag.min Makefile
 	mono ~/Downloads/shader_minifier.exe --preserve-externals shader.frag.min -o shader.h
@@ -20,7 +27,7 @@ main : main.c shader.h Makefile
 
 main_packed : main ../packer/header Makefile
 	gzip --no-name -9 -c main | wc -c
-	zopfli --gzip --i50 -c main > main.gz
+	zopfli --gzip --i500 -c main > main.gz
 	wc -c main.gz
 	cat ../packer/header main.gz > main_packed
 	chmod +x main_packed

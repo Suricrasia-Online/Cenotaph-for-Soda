@@ -10,7 +10,7 @@
 #include<GL/glu.h>
 
 #include "shader.h"
-// #define DEBUG true
+//#define DEBUG true
 
 static inline void swap(GLuint* t1, GLuint* t2) {
     GLuint temp = *t1;
@@ -75,6 +75,13 @@ if (glc == NULL) {
 glXMakeCurrent(dpy, win, glc);
 
 
+glBindFramebuffer(GL_FRAMEBUFFER, 0);
+glViewport(0,0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+glClearColor(0.0,0.0,0.0,0.0);
+glClear(GL_COLOR_BUFFER_BIT);
+
+glXSwapBuffers(dpy, win);
 
 GLuint textureA;
 glEnable(GL_TEXTURE_2D);
@@ -165,13 +172,6 @@ exit(-10);
 
 glUseProgram(p);
 
-glBindFramebuffer(GL_FRAMEBUFFER, 0);
-glViewport(0,0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-glClearColor(0.0,0.0,0.0,0.0);
-glClear(GL_COLOR_BUFFER_BIT);
-
-glXSwapBuffers(dpy, win);
 XGrabKeyboard(dpy, win, true, GrabModeAsync, GrabModeAsync, CurrentTime);
 
 glBindFramebuffer(GL_FRAMEBUFFER, fboA);
@@ -197,7 +197,7 @@ glClear(GL_COLOR_BUFFER_BIT);
 // glBindFramebuffer(GL_FRAMEBUFFER, 0);
 // glBindFramebuffer(GL_FRAMEBUFFER, fboA);
 
-for (int x = 0; x < 25; x++) {
+for (int x = 0; x < 5; x++) {
   render(p, fboA, textureB, x*2);
   render(p, fboB, textureA, x*2+1);
   // swap(&fboA, &fboB);
