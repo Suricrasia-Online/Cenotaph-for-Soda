@@ -163,7 +163,7 @@ void main() {
 
 	// Generate plate axes with Z-up. will break if pointed straight up
 	// may be converted to constants in the final version...
-	vec3 up = vec3(0.0, sin(time/1000.0), cos(time/1000.0));
+	vec3 up = vec3(0.0, 0.0, 1.0);
 	vec3 plateXAxis = normalize(cross(cameraDirection, up));
 	vec3 plateYAxis = normalize(cross(cameraDirection, plateXAxis));
 

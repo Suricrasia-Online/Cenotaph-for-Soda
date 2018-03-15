@@ -5,13 +5,28 @@ struct Ray
   vec3 direction;
   vec3 point;
   bool intersected;
+  int mat;
   vec3 color;
 };
+    
+struct Mat
+{
+    vec3 diffuse;
+    vec3 specular;
+    float spec_exp;
+    vec3 reflection;
+};
 
-#define NUMPARAMS 10
+Mat mats[2] = Mat[](
+    Mat(vec3(0.6, 0.5, 0.1), vec3(0.5), 5.0, vec3(0.1)),
+    Mat(vec3(0.1, 0.6, 0.5), vec3(0.5), 25.0, vec3(0.5))
+);
+
+
+#define NUMPARAMS 5
 vec2 params[NUMPARAMS] = vec2[](
-    vec2(0.0,0.0), vec2(0.02,0.1), vec2(0.02,-0.05), vec2(0.0,-0.05), vec2(0.0,-0.0),
-    vec2(-0.01,0.0), vec2(-0.01,0.0), vec2(0.0,0.0), vec2(0.0,-0.00), vec2(-0.0,0.0)
+    vec2(0.0,0.0), vec2(0.02,0.09), vec2(0.01,-0.05), vec2(0.0,-0.05), vec2(-0.01,-0.0)//,
+    //vec2(-0.01,0.0), vec2(-0.01,0.005), vec2(0.0,0.005), vec2(0.0,-0.005), vec2(-0.0,0.005)
 );
 
 vec2 cmpxi = vec2(0.0, 1.0);
@@ -62,8 +77,6 @@ float curvemax() {
     return val;
 }
 
-
-
 float distanceToCurve(vec2 point) {
     float maximum = curvemax();
     float buffer = 0.08;
@@ -106,12 +119,40 @@ float distanceToCurve(vec2 point) {
     return secondOrder;*/
 }
 
+float maxx(float a, float b, float c) {
+    return max(max(a, b), c);
+}
+
+float minn(float a, float b, float c) {
+    return min(min(a, b), c);
+}
+
 float smin( float a, float b, float k )
 {
     float h = clamp( 0.5+0.5*(b-a)/k, 0.0, 1.0 );
     return mix( b, a, h ) - k*h*(1.0-h);
 }
 
+float unitSquare(vec3 point) {
+    vec3 ptabs = abs(point);
+    return maxx(ptabs.x, ptabs.y, ptabs.z) - 1.0;
+}
+
+float unitSquareFrame(vec3 point) {
+    vec2 mult = vec2(0.9, 1.05);
+    float sqmain = unitSquare(point);
+    float sq1 = unitSquare(point * mult.xyy);
+    float sq2 = unitSquare(point * mult.yxy);
+    float sq3 = unitSquare(point * mult.yyx);
+    float inner = minn(sq1, sq2, sq3);
+    return max(sqmain,-inner);
+}
+
+float unitCylinder(vec3 point, float h) {
+    return max(distance(point.xy, vec2(0.0)) - 1.0, abs(point.z) - h);
+}
+
+/*
 vec3 shadeDistance(float d) {
     float dist = d*500.0;
     float banding = max(sin(dist), 0.0);
@@ -129,10 +170,18 @@ vec3 shadeDistance(float d) {
         
     }
     return color;
+}*/
+
+
+vec2 matUnion(vec2 a, vec2 b) {
+    return (a.x < b.x) ? a : b;
+}
+vec2 smatUnion(vec2 a, vec2 b, float k) {
+    return vec2(smin(a.x, b.x, k), matUnion(a, b).y);
 }
 
-
-float scene(vec3 point) {
+vec2 bottle(vec3 point) {
+    //blackle were you raised in a barn? fix this shit!
     vec3 origin = vec3(0.0,0.0,0.0);
     float dist = distance(point.xy, origin.xy) - 0.3;
     float top = point.z*2.0;
@@ -148,42 +197,83 @@ float scene(vec3 point) {
         shell = -smin(-shell, cut, 0.1);
     }
     
-    //return shell;
+    float lid = unitCylinder(point*6.3 + vec3(0.0,0.0,6.2), 0.7) / 6.3;
+    
+    float label = unitCylinder(point*3.1 + vec3(0.0,0.0,-0.75), 1.0) / 2.9;
+    
+    return smatUnion(vec2(shell, 1.0), vec2(min(label, lid), 0.0), 0.02);
     //to get interior
-    return max(shell, -shell - 0.01)*0.95;
+    //return max(shell, -shell - 0.01)*0.95 + 0.003;
+}
+
+vec2 scene(vec3 point) {
+    return matUnion(vec2(unitSquareFrame(point), 0.0), bottle(point));
 }
 
 #define EPSI 0.001
 vec3 sceneGrad(vec3 point) {
-  float x = (scene(point) - scene(point + vec3(EPSI,0.0,0.0)));
-  float y = (scene(point) - scene(point + vec3(0.0,EPSI,0.0)));
-  float z = (scene(point) - scene(point + vec3(0.0,0.0,EPSI)));
+  float x = (scene(point).x - scene(point + vec3(EPSI,0.0,0.0)).x);
+  float y = (scene(point).x - scene(point + vec3(0.0,EPSI,0.0)).x);
+  float z = (scene(point).x - scene(point + vec3(0.0,0.0,EPSI)).x);
   return normalize(vec3(x,y,z));
 }
 
 Ray newRay(vec3 origin, vec3 direction) {
     // Create a default ray
-  return Ray(origin, direction, origin, false, vec3(0.0,0.0,0.0));
+  return Ray(origin, direction, origin, false, -1, vec3(0.0,0.0,0.0));
 }
 
-Ray castRay(Ray ray) {
+void castRay(inout Ray ray) {
     // Cast ray from origin into scene
     for (int i = 0; i < 100; i++) {
         if (distance(ray.point, ray.origin) > 20.0) {
             break;
         }
 
-        float dist = scene(ray.point);
-
+        vec2 smpl = scene(ray.point);
+        float dist = smpl.x;
         
         if (abs(dist) < EPSI) {
             ray.intersected = true;
+            ray.mat = int(smpl.y);
             break;
         }
         
         ray.point += dist * ray.direction;
     }
-    return ray;
+}
+
+void phongShadeRay(inout Ray ray) {
+    if (ray.intersected) {
+        Mat mat = mats[ray.mat];
+
+        vec3 lightDirection = vec3(-1.0,0.0,0.0);
+        vec3 normal = -sceneGrad(ray.point);
+        vec3 reflected = reflect(lightDirection, normal);
+        float diffuse = max(dot(lightDirection, normal), 0.0);
+        float specular = pow(max(dot(ray.direction, reflected), 0.0), mat.spec_exp);
+        if (diffuse == 0.0) specular = 0.0;    
+        
+        ray.color = mat.diffuse * (diffuse + 0.1) + mat.specular * specular;
+    } else {
+        ray.color = vec3(pow(max(cos(ray.direction.z*1.0)*cos(ray.direction.x*4.0)*cos(ray.direction.y*4.0), 0.0),4.0))*0.1;
+    }
+}
+
+void recursiveShadeRay(inout Ray ray) {
+    phongShadeRay(ray);
+
+    if (ray.intersected) {
+        Mat mat = mats[ray.mat];
+
+        vec3 normal = -sceneGrad(ray.point);
+        vec3 reflected = reflect(ray.direction, normal);
+
+        Ray bounce = newRay(ray.point + normal*0.01, reflected);
+        castRay(bounce);
+        phongShadeRay(bounce);
+        ray.color += bounce.color * mat.reflection;
+    }
 }
 
 
@@ -191,10 +281,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
     // Normalized pixel coordinates (from -1 to 1)
     vec2 uv = (fragCoord/iResolution.xy)*2.0 - vec2(1.0,1.0);
     uv.y *= iResolution.y/iResolution.x;
+    
+    vec2 mouse = (iMouse.xy/iResolution.xy)*2.0 - vec2(1.0);
+    mouse.x *= 3.1415*2.0;
 
     // Camera parameters
-    vec3 cameraOrigin = vec3(-7.0, 0.0, 5.0);
-    vec3 cameraDirection = normalize(vec3(1.0, 0.0, -0.69));
+    vec3 cameraOrigin = vec3(-7.0*cos(mouse.x), -7.0*sin(mouse.x), mouse.y*5.0);
+    vec3 cameraDirection = normalize(vec3(0.0)-cameraOrigin);
     
     // Generate plate axes with Z-up. will break if pointed straight up
     // may be converted to constants in the final version...
@@ -202,19 +295,14 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
     vec3 plateXAxis = normalize(cross(cameraDirection, up));
     vec3 plateYAxis = normalize(cross(cameraDirection, plateXAxis));
     
-    float fov = radians(30.0);
+    float fov = radians(40.0);
     vec3 platePoint = (plateXAxis * uv.x + plateYAxis * uv.y) * tan(fov /2.0);
     
     vec3 rayDirection = normalize(platePoint + cameraDirection);
     
     Ray ray = newRay(cameraOrigin, rayDirection);
-    ray = castRay(ray);
+    castRay(ray);
+    phongShadeRay(ray);
     
-    float val = 0.0;
-    if (ray.intersected) {
-        float val = max(dot(sceneGrad(ray.point), cameraDirection), 0.0);
-        fragColor = vec4(val);
-    } else {
-        fragColor = vec4(shadeDistance(distanceToCurve(uv)), 1.0);
-    }
+    fragColor = vec4(ray.color, 1.0);
 }
