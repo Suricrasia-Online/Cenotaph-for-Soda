@@ -1,5 +1,4 @@
 #version 450
-uniform sampler2D canvas;
 uniform float time;
 out vec4 fragColor;
 
@@ -242,8 +241,7 @@ vec2 bottle(vec3 point) {
 
 vec2 scene(vec3 point) {
     vec3 repeated = vec3(mod(point.xy, vec2(2.0, 2.0)) - vec2(1.0, 1.0), point.z);
-    vec2 s = bottle(repeated);
-    return s;//matUnion(vec2(unitSquareFrame(point), 2.0), s);
+    return bottle(repeated);
 }
 
 vec3 sceneGrad(vec3 point) {
@@ -373,7 +371,7 @@ void main() {
     vec3 plateYAxis = normalize(cross(cameraDirection, plateXAxis));
 
     //DOF with focal point at origin
-    vec2 blur = (vec2(getFloat(state)+getFloat(state), getFloat(state)+getFloat(state)) - vec2(1.0))*0.05 * vec2(1.0, 1080.0/1920.0);
+    vec2 blur = (vec2(getFloat(state)+getFloat(state), getFloat(state)+getFloat(state)) - vec2(1.0))*0.025 * vec2(1.0, 1080.0/1920.0);
     cameraOrigin += plateXAxis*blur.x + plateYAxis*blur.y;
     cameraDirection = normalize(vec3(0.0)-cameraOrigin);
     plateXAxis = normalize(cross(cameraDirection, up));
@@ -389,7 +387,5 @@ void main() {
     castRay(ray);
     recursiveShadeRay(ray);
     
-    fragColor = vec4(ray.m_color, 1.0)*(1./11.);
-
-    fragColor += texture2D(canvas, uv);
+    fragColor = vec4(ray.m_color, 1.0)*(1./10.);
 }
