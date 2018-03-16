@@ -10,13 +10,7 @@
 #include<GL/glu.h>
 
 #include "shader.h"
-#define DEBUG true
-
-static inline void swap(GLuint* t1, GLuint* t2) {
-    GLuint temp = *t1;
-    *t1 = *t2;
-    *t2 = temp;
-}
+// #define DEBUG true
 
 #define CANVAS_WIDTH 1920
 #define CANVAS_HEIGHT 1080
@@ -198,7 +192,7 @@ glClear(GL_COLOR_BUFFER_BIT);
 // glBindFramebuffer(GL_FRAMEBUFFER, fboA);
 
 glFinish();
-for (int x = 0; x < 1; x++) {
+for (int x = 0; x < 5; x++) {
   render(p, fboA, textureB, x*2);
   glFinish();
   render(p, fboB, textureA, x*2+1);
@@ -253,10 +247,10 @@ while(1) {
         XNextEvent(dpy, &xev);
 
         if(xev.type == KeyPress) {
-          asm(".intel_syntax noprefix");
-          asm("mov rax, 60");
-      		asm("syscall");
-          asm(".att_syntax prefix");
+          asm volatile(".intel_syntax noprefix");
+          asm volatile("mov rax, 60");
+      		asm volatile("syscall");
+          asm volatile(".att_syntax prefix");
         }
     } /* this closes while(1) { */
 } /* this is the } which closes int main(int argc, char *argv[]) { */

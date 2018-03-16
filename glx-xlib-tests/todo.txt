@@ -1,5 +1,12 @@
 todo: 
+[ ] make the escape key be the only thing that quits. and it must quit at any time (within reason)
 [ ] set 1920x1080 video mode
-[ ] make the soda bottle look more like a soda bottle
-[ ] gamma correct rendering
-[ ] random positioning
+[ ] grade colours on final rendering pass
+			- curve from gimp
+[ ] make a cute label for the bottles. I have more than enough space!
+			- render some text with pango into a texture?~
+			- hng revision logo
+			- with the 2018 hexagonal aesthetic~~
+[!] make the soda bottle look more like a soda bottle (nixed)
+[!] gamma correct rendering (nixed)
+[!] random positioning (nixed)

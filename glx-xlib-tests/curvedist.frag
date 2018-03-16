@@ -218,6 +218,7 @@ vec2 bottle(vec3 point) {
     
     for (int i = 0; i < 3; i++) {
         vec2 angle = cmpxexp(cmpxi*(3.14/3.0*float(i)));
+        //note, make this a call to unitCylinder
         float cut = distance(vec2(dot(point.xy, angle), point.z), vec2(dot(origin.xy, angle), 0.95)) - 0.06;
         shell = -smin(-shell, cut, 0.1);
     }
@@ -388,7 +389,7 @@ void main() {
     castRay(ray);
     recursiveShadeRay(ray);
     
-    fragColor = vec4(ray.m_color, 1.0)*(1./3.);
+    fragColor = vec4(ray.m_color, 1.0)*(1./11.);
 
     fragColor += texture2D(canvas, uv);
 }
