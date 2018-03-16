@@ -372,7 +372,7 @@ void main() {
     vec3 plateYAxis = normalize(cross(cameraDirection, plateXAxis));
 
     //DOF with focal point at origin
-    vec2 blur = (vec2(getFloat(state)+getFloat(state), getFloat(state)+getFloat(state)) - vec2(1.0))*0.1 * vec2(1.0, 1080.0/1920.0);
+    vec2 blur = (vec2(getFloat(state)+getFloat(state), getFloat(state)+getFloat(state)) - vec2(1.0))*0.05 * vec2(1.0, 1080.0/1920.0);
     cameraOrigin += plateXAxis*blur.x + plateYAxis*blur.y;
     cameraDirection = normalize(vec3(0.0)-cameraOrigin);
     plateXAxis = normalize(cross(cameraDirection, up));
