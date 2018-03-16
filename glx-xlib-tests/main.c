@@ -139,7 +139,7 @@ void _start() {
   glFinish();
 
   //begin collecting samples, using the shader as the renderer
-  for (int x = 0; x < 10; x++) {
+  for (int x = 0; x < 8; x++) {
     glUniform1f(0, x);
     glRecti(-1,-1,1,1);
     glFinish();
@@ -155,7 +155,7 @@ void _start() {
     XNextEvent(dpy, &xev);
 
     //wait for escape key, then exit without glib :3
-    if(xev.type == KeyPress) {
+    if(xev.type == KeyPress && xev.xkey.keycode == 0x09) {
       asm volatile(".intel_syntax noprefix");
       asm volatile("mov rax, 60");
       asm volatile("syscall");

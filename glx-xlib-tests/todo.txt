@@ -1,8 +1,8 @@
 todo: 
 [ ] make the escape key be the only thing that quits. and it must quit at any time (within reason)
-[ ] try out using fragment blending instead of buffering
+[x] try out using fragment blending instead of buffering
 [ ] set 1920x1080 video mode
-[ ] grade colours on final rendering pass
+[x] grade colours on final rendering pass
 			- curve from gimp
 [ ] make a cute label for the bottles. I have more than enough space!
 			- render some text with pango into a texture?~ (unlikely)

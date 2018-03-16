@@ -246,15 +246,15 @@ vec2 scene(vec3 point) {
 
 vec3 sceneGrad(vec3 point) {
     float t = scene(point).x;
-  float x = (t - scene(point + vec3(0.001,0.0,0.0)).x);
-  float y = (t - scene(point + vec3(0.0,0.001,0.0)).x);
-  float z = (t - scene(point + vec3(0.0,0.0,0.001)).x);
-  return normalize(vec3(x,y,z));
+    float x = (t - scene(point + vec3(0.001,0.0,0.0)).x);
+    float y = (t - scene(point + vec3(0.0,0.001,0.0)).x);
+    float z = (t - scene(point + vec3(0.0,0.0,0.001)).x);
+    return normalize(vec3(x,y,z));
 }
 
 Ray newRay(vec3 origin, vec3 direction, float cumdist) {
     // Create a default ray
-  return Ray(origin, direction, origin, false, -1, vec3(0.0), cumdist);
+    return Ray(origin, direction, origin, false, -1, vec3(0.0), cumdist);
 }
 
 float eps4dist(float dist) {
@@ -351,6 +351,11 @@ void recursiveShadeRay(inout Ray ray) {
     }
 }
 
+float grade(float val) {
+    float x = clamp(val, 0.0, 1.0);
+    return -2.56 * x*x*x + 4.63 * x*x - 1.19 * x + 0.125;
+}
+
 void main() {
     // Normalized pixel coordinates (from -1 to 1)
     vec2 uv = gl_FragCoord.xy/vec2(1920.0, 1080.0);
@@ -387,5 +392,6 @@ void main() {
     castRay(ray);
     recursiveShadeRay(ray);
     
-    fragColor = vec4(ray.m_color, 1.0)*(1./10.);
+    ray.m_color = vec3(grade(ray.m_color.x),grade(ray.m_color.y),grade(ray.m_color.z));
+    fragColor = vec4(ray.m_color, 1.0)*(1./8.);
 }
