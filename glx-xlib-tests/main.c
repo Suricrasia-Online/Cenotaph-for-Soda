@@ -10,7 +10,7 @@
 #include<GL/glu.h>
 
 #include "shader.h"
-// #define DEBUG true
+#define DEBUG true
 
 #define CANVAS_WIDTH 1920
 #define CANVAS_HEIGHT 1080
@@ -139,7 +139,7 @@ void _start() {
   glFinish();
 
   //begin collecting samples, using the shader as the renderer
-  for (int x = 0; x < 8; x++) {
+  for (int x = 0; x < 1; x++) {
     glUniform1f(0, x);
     glRecti(-1,-1,1,1);
     glFinish();

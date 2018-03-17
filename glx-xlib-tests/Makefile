@@ -1,5 +1,5 @@
 
-all : main_packed
+all : main
 
 shader.frag.min : shader.frag curvedist.frag Makefile
 	cp shader.frag shader.frag.min
@@ -11,6 +11,7 @@ shader.frag.min : shader.frag curvedist.frag Makefile
 	sed -i 's/m_color/c/g' shader.frag.min
 	sed -i 's/m_mat/m/g' shader.frag.min
 	sed -i 's/m_cumdist/y/g' shader.frag.min
+	sed -i 's/m_attenuation/l/g' shader.frag.min
 
 	sed -i 's/m_diffuse/o/g' shader.frag.min
 	sed -i 's/m_specular/d/g' shader.frag.min
@@ -30,7 +31,7 @@ main : main.c shader.h Makefile
 
 main_packed : main ../packer/header Makefile
 	gzip --no-name -9 -c main | wc -c
-	zopfli --gzip --i500 -c main > main.gz
+	zopfli --gzip --i50 -c main > main.gz
 	wc -c main.gz
 	cat ../packer/header main.gz > main_packed
 	chmod +x main_packed
