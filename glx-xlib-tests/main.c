@@ -19,8 +19,8 @@
 #define CANVAS_HEIGHT 1080
 
 struct _textloc {
-  char* text;
   char* font;
+  char* text;
   cairo_matrix_t matrix;
   float origin_x;
   float origin_y;
@@ -150,12 +150,6 @@ void _start() {
       .origin_x = 1150,
       .origin_y = 120,
     }
-    // { 
-    //   .text = "how do i",
-    //   .matrix = {.xx = 50, .xy = -10, .yy = -50, .yx = 20, .x0 = 0, .y0 = 0},
-    //   .origin_x = 180,
-    //   .origin_y = 550,
-    // }
   };
 
   for (int i = 0; i < 8; i++) {
@@ -164,26 +158,6 @@ void _start() {
     cairoCtx->backend->move_to(cairoCtx, texts[i].origin_x, texts[i].origin_y);
     cairo_show_text(cairoCtx, texts[i].text);
   }
-
-  // char *text[9] = {
-  //   "",
-  //   "rip lol",
-  //   "",
-  //   "",
-  //   "  gg no re",
-  //   "",
-  //   "how do i",
-  //   "rotate text",
-  //   "in ms paint"};
-  // for (int i = 0; i < 3; i++) {
-  //   for (int j = 0; j < 3; j++) {
-  //     cairo_matrix_t matrix = {.xx = 50 - i*10, .xy = (i == 2) ? 0 : -10, .yy = -50 + i*10, .yx = (i == 2) ? 0 : 20, .x0 = 180 + i*400, .y0 = 600 + i*180};
-  //     cairoCtx->backend->set_font_matrix(cairoCtx, &matrix);
-  //     cairoCtx->backend->move_to(cairoCtx, 0, -40.0*j);
-  //     // cairo_move_to(cairoCtx, );
-  //     cairo_show_text(cairoCtx, text[i*3+j]);
-  //   }
-  // }
 
   //make this not shitty?
   for (int i = 0; i < 4 * CANVAS_HEIGHT * CANVAS_WIDTH; i++) {

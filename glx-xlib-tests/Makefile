@@ -23,7 +23,7 @@ shader.h : shader.frag.min Makefile
 	mono ~/Downloads/shader_minifier.exe --preserve-externals shader.frag.min -o shader.h
 
 main : main.c shader.h Makefile
-	gcc -o main main.c -I/usr/include/pango-1.0 -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/cairo/ -lX11 -lGL -lGLU -lcairo -O1 -std=gnu11 -nostartfiles
+	gcc -o main main.c -lX11 -lGL -lGLU -lcairo -O1 -std=gnu11 -nostartfiles
 	strip main
 	strip -R .note -R .comment -R .eh_frame -R .eh_frame_hdr -R .note.gnu.build-id main
 	truncate --size=-1072 main
