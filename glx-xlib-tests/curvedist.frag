@@ -321,7 +321,7 @@ Ray transmissionForRay(Ray ray) {
     return newRay(ray.m_point - normal*eps4dist(ray.m_cumdist)*4.0*sgn, ray.m_direction, atten, ray.m_cumdist);
 }
 
-#define QUEUELEN 20
+#define QUEUELEN 10
 Ray rayQueue[QUEUELEN];
 int raynum;
 void addToQueue(Ray ray) {
@@ -383,7 +383,7 @@ void main() {
     // plateYAxis = normalize(cross(cameraDirection, plateXAxis));
     
     float fov = radians(40.0);
-    vec2 plateCoords = (uv * 2.0 - 1.0) * vec2(1.0, 1080.0/1920.0);// + vec2(getFloat(state), getFloat(state)) * 2.0/1080.0;
+    vec2 plateCoords = (uv * 2.0 - 1.0) * vec2(1.0, 1080.0/1920.0) + vec2(getFloat(state), getFloat(state)) * 2.0/1080.0;
     vec3 platePoint = (plateXAxis * plateCoords.x + plateYAxis * -plateCoords.y) * tan(fov /2.0);
 
     vec3 rayDirection = normalize(platePoint + cameraDirection);

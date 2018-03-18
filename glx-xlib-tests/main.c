@@ -81,7 +81,7 @@ void _start() {
   cairo_surface_t* cairoSurf = cairo_image_surface_create_for_data(data, CAIRO_FORMAT_ARGB32, CANVAS_WIDTH, CANVAS_HEIGHT, 4 * CANVAS_WIDTH);
   cairo_t* cairoCtx = cairo_create(cairoSurf);
 
-  cairo_select_font_face(cairoCtx, "Ubuntu", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
+  cairo_select_font_face(cairoCtx, "Ubuntu Condensed", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
   cairo_matrix_t matrix = {.xx = 40, .xy = -10, .yy = -80, .yx = -10, .x0 = 1300, .y0 = 900};
   // cairo_set_font_matrix(cairoCtx, &matrix);
   cairoCtx->backend->set_font_matrix(cairoCtx, &matrix);
