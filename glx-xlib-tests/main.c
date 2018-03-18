@@ -13,7 +13,7 @@
 #include "cairo-private.h"
 
 #include "shader.h"
-#define DEBUG true
+// #define DEBUG true
 
 #define CANVAS_WIDTH 1920
 #define CANVAS_HEIGHT 1080
@@ -81,22 +81,28 @@ void _start() {
   cairo_surface_t* cairoSurf = cairo_image_surface_create_for_data(data, CAIRO_FORMAT_ARGB32, CANVAS_WIDTH, CANVAS_HEIGHT, 4 * CANVAS_WIDTH);
   cairo_t* cairoCtx = cairo_create(cairoSurf);
 
-  cairo_select_font_face(cairoCtx, "Ubuntu Condensed", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
-  cairo_matrix_t matrix = {.xx = 40, .xy = -10, .yy = -80, .yx = -10, .x0 = 1300, .y0 = 900};
+  cairo_select_font_face(cairoCtx, "DejaVu Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
   // cairo_set_font_matrix(cairoCtx, &matrix);
-  cairoCtx->backend->set_font_matrix(cairoCtx, &matrix);
   // printf("xx: %f, xy: %f, yy: %f, yx: %f, x0: %f, y0: %f\n", matrix.xx, matrix.xy, matrix.yy, matrix.yx, matrix.x0, matrix.y0);
 
-  char *text[5] = {
-    "Suricrasia Online Presents:",
-    "A \"Polyethylene Cenotaph\"",
-    "in Commemoration of All the",
-    "Soda That Blackle Drank in",
-    "the Making of This Demo"};
-  for (int i = 0; i < 5; i++) {
-    cairoCtx->backend->move_to(cairoCtx, i%2 ? 10 : 0, -120.0*i);
-    // cairo_move_to(cairoCtx, );
-    cairo_show_text(cairoCtx, text[i]);
+  char *text[9] = {
+    "",
+    "rip lol",
+    "",
+    "",
+    "  gg no re",
+    "",
+    "how do i",
+    "rotate text",
+    "in ms paint"};
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      cairo_matrix_t matrix = {.xx = 50 - i*10, .xy = (i == 2) ? 0 : -10, .yy = -50 + i*10, .yx = (i == 2) ? 0 : 20, .x0 = 180 + i*400, .y0 = 600 + i*180};
+      cairoCtx->backend->set_font_matrix(cairoCtx, &matrix);
+      cairoCtx->backend->move_to(cairoCtx, 0, -40.0*j);
+      // cairo_move_to(cairoCtx, );
+      cairo_show_text(cairoCtx, text[i*3+j]);
+    }
   }
 
   //make this not shitty?

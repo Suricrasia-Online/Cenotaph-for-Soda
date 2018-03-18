@@ -2,27 +2,6 @@
 uniform float time;
 out vec4 fragColor;
 
-//http://www.reedbeta.com/blog/quick-and-easy-gpu-random-numbers-in-d3d11/
-void stepState(inout uint state)
-{
-    state = (state ^ 61u) ^ (state >> 16u);
-    state *= 9u;
-    state = state ^ (state >> 4u);
-    state *= 0x27d4eb2du;
-    state = state ^ (state >> 15u);
-}
-
-void feed(inout uint state, float value)
-{
-    stepState(state);
-    state ^= uint(floatBitsToInt(value));
-}
-
-float getFloat(inout uint state) {
-    stepState(state);
-    return uintBitsToFloat( (state & 0x007FFFFFu) | 0x3F800000u ) - 1.0;
-}
-
 struct Ray
 {
   vec3 m_origin;
@@ -58,42 +37,11 @@ vec3 lightdirs[3] = vec3[3](
 );
 
 vec3 lightcols[3] = vec3[3](
-    vec3(2.0, 2.0, 1.0),
-    vec3(1.0, 0.5, 1.0),
-    vec3(0.5, 1.0, 1.0)
+    vec3(2.0, 2.0, 0.0),
+    vec3(2.0, 0.0, 2.0),
+    vec3(0.0, 2.0, 2.0)
 );
 
-float curve(float x) {
-    return 0.1*sin(x + 0.2) - 0.05*sin(2.0*x) - 0.05*sin(3.0*x);
-}
-
-float curvedx(float x) {
-    return 0.1*cos(x + 0.2) - 0.1*cos(2.0*x) - 0.15*cos(3.0*x);
-}
-
-// float curvemax() {
-//     float val = 0.0;
-//     for (int n = 0; n < 3; n++) {
-//         val += cmpxabs(params[n]);
-//     }
-//     return val;
-// }
-
-float distanceToCurve(vec2 point) {
-    // float maximum = curvemax();
-    // float buffer = 0.08;
-    // if (abs(point.y) > maximum + buffer) {
-    //     return sign(point.y)*(abs(point.y) - maximum);
-    // }
-
-    float scale = 2.5;
-    float fx = curve(point.x*scale);
-    float dfx = scale*curvedx(point.x*scale);
-    //float ddfx = curveddx(point.x*);
-    
-    return (point.y-fx)/sqrt(dfx*dfx + 1.0);
-
-}
 
 float smin( float a, float b, float k )
 {
@@ -102,25 +50,16 @@ float smin( float a, float b, float k )
     return mix( b, a, h ) - k*h*(1.0-h);
 }
 
-float rectangle(vec3 point, float w, float l, float h, float s) {
-    vec3 ptabs = abs(point);
-    return -smin(smin(w - ptabs.x, l - ptabs.y, s), h - ptabs.z, s);
+float distanceToBottleCurve(vec2 point) {
+    float x = point.x*2.5;
+    
+    return point.y-0.1*sin(x + 0.2) + 0.05*sin(2.0*x) + 0.05*sin(3.0*x);
 }
 
 float tombstone(vec3 point, float w, float l, float h, float s, float s2) {
     vec3 ptabs = abs(point);
     return -smin(smin(w - ptabs.x, h - ptabs.z, s2), l - ptabs.y, s);
 }
-
-// float unitSquareFrame(vec3 point) {
-//     vec2 mult = vec2(0.9, 1.05);
-//     float sqmain = unitSquare(point);
-//     float sq1 = unitSquare(point * mult.xyy);
-//     float sq2 = unitSquare(point * mult.yxy);
-//     float sq3 = unitSquare(point * mult.yyx);
-//     float inner = min(min(sq1, sq2), sq3);
-//     return max(sqmain,-inner);
-// }
 
 float cylinder(vec3 point, float r, float h, float s) {
     return -smin(-(distance(point.xy, vec2(0.0)) - r), -(abs(point.z) - h), s);
@@ -146,7 +85,7 @@ vec2 bottle(vec3 point) {
     float top = point.z;
 
     float tops = abs(top-0.05) - 0.95;
-    float curve = distanceToCurve(vec2(top, dist - 0.3));
+    float curve = distanceToBottleCurve(vec2(top, dist - 0.3));
     curve += min(sin(atan(point.y/point.x)*16.0), 0.0)*0.001;
     
     float shell = -smin(-tops, -curve, 0.2);
@@ -186,12 +125,13 @@ vec2 scene(vec3 point) {
 
 
     vec3 p = point - offset;
-    float grave = -smin(-p.z, rectangle(p, 0.6 + p.z*0.2, 1.2 + p.z*0.2, 0.75, 0.1), 0.1);
+    float wobble = cos(point.z)*cos(point.y*5.0)*cos(point.x*5.0)*0.01;
+    float grave = -smin(-p.z, tombstone(p, 0.6 + p.z*0.2, 1.2 + p.z*0.2, 0.75, 0.1, 0.1), 0.1);
     float stone = tombstone(p + vec3(0.0, 1.5, 0.0), 0.5 - p.z*0.01, 0.12 - p.z*0.01, 1.2, 0.1, 0.5);
     vec3 p4b = (p - vec3(0.0, 0.0, -0.25)).zxy;
 
     // return bottle(p4b);
-    return matUnion(vec2(smin(stone, grave, 0.1), 1.0), bottle(p4b));
+    return matUnion(vec2(wobble + smin(stone, grave, 0.1), 1.0), bottle(p4b));
 }
 
 vec3 sceneGrad(vec3 point) {
@@ -255,51 +195,6 @@ void phongShadeRay(inout Ray ray) {
     }
 }
 
-// void reflectiveShadeRay(inout Ray ray, float sgn) {
-//     phongShadeRay(ray);
-
-//     if (ray.m_intersected) {
-//         Mat mat = mats[ray.m_mat];
-//         vec3 normal = -sceneGrad(ray.m_point);
-//         float frensel = abs(dot(ray.m_direction, normal));
-//         vec3 reflected = reflect(ray.m_direction, normal);
-
-//         Ray bounce = newRay(ray.m_point + normal*eps4dist(ray.m_cumdist)*4.0*sgn, reflected, ray.m_cumdist);
-//         castRay(bounce);
-//         phongShadeRay(bounce);
-
-//         ray.m_color += bounce.m_color * mat.m_reflectance * (1.0 - frensel*0.98);
-//     }
-// }
-
-// void recursiveShadeRay(inout Ray ray) {
-//     reflectiveShadeRay(ray, 1.0);
-
-//     if (ray.m_intersected) {
-//         Mat mat = mats[ray.m_mat];
-
-//         vec3 normal = -sceneGrad(ray.m_point);
-//         float frensel = abs(dot(ray.m_direction, normal));
-
-//         Ray trans = newRay(ray.m_point - normal*eps4dist(ray.m_cumdist)*4.0, -ray.m_direction, ray.m_cumdist);
-//         castRay(trans);
-//         reflectiveShadeRay(trans, -1.0);
-        
-//         Mat matt = mats[trans.m_mat];
-        
-//         vec3 normal2 = -sceneGrad(trans.m_point);
-//         float frensel2 = abs(dot(ray.m_direction, normal2));
-
-//         Ray trans2 = newRay(trans.m_point + ray.m_direction*eps4dist(trans.m_cumdist)*4.0, ray.m_direction, trans.m_cumdist);
-//         castRay(trans2);
-//         reflectiveShadeRay(trans2, 1.0);
-        
-        
-//         trans.m_color += trans2.m_color * matt.m_transparency * frensel2;
-//         ray.m_color += trans.m_color * mat.m_transparency * frensel;
-//     }
-// }
-
 Ray reflectionForRay(Ray ray) {
     Mat mat = mats[ray.m_mat];
     float sgn = sign(scene(ray.m_origin).x);
@@ -321,7 +216,7 @@ Ray transmissionForRay(Ray ray) {
     return newRay(ray.m_point - normal*eps4dist(ray.m_cumdist)*4.0*sgn, ray.m_direction, atten, ray.m_cumdist);
 }
 
-#define QUEUELEN 10
+#define QUEUELEN 8
 Ray rayQueue[QUEUELEN];
 int raynum;
 void addToQueue(Ray ray) {
@@ -341,7 +236,7 @@ void recursivelyRender(inout Ray ray) {
         castRay(rayQueue[i]);
         phongShadeRay(rayQueue[i]);
         if (rayQueue[i].m_intersected) {
-            if(raynum < 10) addToQueue(reflectionForRay(rayQueue[i]));
+            if(raynum < 7) addToQueue(reflectionForRay(rayQueue[i]));
             addToQueue(transmissionForRay(rayQueue[i]));
         }
     }
@@ -356,35 +251,16 @@ float grade(float val) {
     return -2.56 * x*x*x + 4.63 * x*x - 1.19 * x + 0.125;
 }
 
+#define SAMPLES 1.0
 void main() {
     // Normalized pixel coordinates (from -1 to 1)
-    vec2 uv = gl_FragCoord.xy/vec2(1920.0, 1080.0);
-
-    uint state = 0u;
-    feed(state, uv.x);
-    feed(state, uv.y);
-    feed(state, time);
+    vec2 offset = vec2(mod(time, SAMPLES), floor(time/SAMPLES))/SAMPLES;
+    vec2 uv = (gl_FragCoord.xy + offset - vec2(960.0, 540.0))/vec2(960.0, 960.0);
 
     // Camera parameters
-    vec3 cameraOrigin = vec3(1.0, 1.0, 1.0)*5.0;
-    vec3 cameraDirection = normalize(vec3(0.0,0.0,0.0)-cameraOrigin);
-    
-    // Generate plate axes with Z-up. will break if pointed straight up
-    // may be converted to constants in the final version...
-    vec3 up = vec3(0.0,0.0,1.0);
-    vec3 plateXAxis = normalize(cross(cameraDirection, up));
-    vec3 plateYAxis = normalize(cross(cameraDirection, plateXAxis));
-
-    //DOF with focal point at origin
-    // vec2 blur = (vec2(getFloat(state)+getFloat(state), getFloat(state)+getFloat(state)) - vec2(1.0))*0.1 * vec2(1.0, 1080.0/1920.0);
-    // cameraOrigin += plateXAxis*blur.x + plateYAxis*blur.y;
-    // cameraDirection = normalize(vec3(0.0)-cameraOrigin);
-    // plateXAxis = normalize(cross(cameraDirection, up));
-    // plateYAxis = normalize(cross(cameraDirection, plateXAxis));
-    
-    float fov = radians(40.0);
-    vec2 plateCoords = (uv * 2.0 - 1.0) * vec2(1.0, 1080.0/1920.0) + vec2(getFloat(state), getFloat(state)) * 2.0/1080.0;
-    vec3 platePoint = (plateXAxis * plateCoords.x + plateYAxis * -plateCoords.y) * tan(fov /2.0);
+    vec3 cameraOrigin = vec3(5.0, 5.0, 5.0);
+    vec3 cameraDirection = vec3(-1.414,-1.414,-1.414);
+    vec3 platePoint = (vec3(-0.71,0.71,0.0) * uv.x + vec3(0.408, 0.408, -0.816) * -uv.y);
 
     vec3 rayDirection = normalize(platePoint + cameraDirection);
 
@@ -392,5 +268,5 @@ void main() {
     recursivelyRender(ray);
     
     ray.m_color = vec3(grade(ray.m_color.x),grade(ray.m_color.y),grade(ray.m_color.z));
-    fragColor = vec4(ray.m_color, 1.0)*(1./1.);
+    fragColor = vec4(ray.m_color, 1.0)*(1./(SAMPLES*SAMPLES));
 }
