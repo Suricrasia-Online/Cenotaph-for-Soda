@@ -44,26 +44,23 @@ struct Mat
     vec3 m_transparency;
 };
 
-Mat mats[4] = Mat[4](
-    Mat(vec3(0.6, 0.5, 0.1), vec3(0.5), 5.0, vec3(0.1), vec3(0.1)), //label
-    Mat(vec3(0.4, 0.5, 0.5), vec3(0.5), 25.0, vec3(0.4), vec3(0.4, 0.5, 0.5)), //bottle
-    Mat(vec3(0.9, 0.9, 0.9), vec3(0.5), 10.0, vec3(0.1), vec3(0.0)), //cap
-    Mat(vec3(0.8, 0.9, 0.9), vec3(0.5), 15.0, vec3(0.1), vec3(0.95)) //outer plastic
+Mat mats[3] = Mat[3](
+    Mat(vec3(0.6, 0.1, 0.1), vec3(0.5), 5.0, vec3(0.1), vec3(0.1)), //label
+    Mat(vec3(0.4, 0.5, 0.5), vec3(0.5), 25.0, vec3(0.4), vec3(0.5, 0.5, 0.5)), //bottle
+    Mat(vec3(0.9, 0.9, 0.9), vec3(0.5), 10.0, vec3(0.1), vec3(0.0)) //cap
 );
 
 //choose good positions...
-vec3 lightdirs[4] = vec3[4](
-    vec3(-0.3, -1.0, -1.0),
-    vec3(-1.0, -0.3, -1.0),
-    vec3(-1.0, -1.0, -0.3),
-    vec3(1.0, 1.0, 1.0)
+vec3 lightdirs[3] = vec3[3](
+    vec3(0.0, 0.5, -1.0),
+    vec3(1.0, -0.5, -1.0),
+    vec3(-1.0, -0.5, -1.0)
 );
 
-vec3 lightcols[4] = vec3[4](
+vec3 lightcols[3] = vec3[3](
     vec3(2.0, 2.0, 1.0),
     vec3(1.0, 0.5, 1.0),
-    vec3(0.5, 1.0, 1.0),
-    vec3(1.0, 1.0, 1.0)
+    vec3(0.5, 1.0, 1.0)
 );
 
 float curve(float x) {
@@ -188,13 +185,13 @@ vec2 scene(vec3 point) {
             : vec3(0.0));
 
 
-    vec3 p = point;// - offset;
-    float grave = -smin(-p.z, rectangle(p, 0.6 + p.z*0.1, 1.2 + p.z*0.1, 1.5, 0.1), 0.1);
-    float stone = tombstone(p + vec3(0.0, 1.5, 0.0), 0.5 - p.z*0.01, 0.1 - p.z*0.01, 1.2, 0.05, 0.5);
-    vec3 p4b = (p - vec3(0.0, 0.0, -1.0)).zxy;
+    vec3 p = point - offset;
+    float grave = -smin(-p.z, rectangle(p, 0.6 + p.z*0.2, 1.2 + p.z*0.2, 0.75, 0.1), 0.1);
+    float stone = tombstone(p + vec3(0.0, 1.5, 0.0), 0.5 - p.z*0.01, 0.12 - p.z*0.01, 1.2, 0.1, 0.5);
+    vec3 p4b = (p - vec3(0.0, 0.0, -0.25)).zxy;
 
     // return bottle(p4b);
-    return matUnion(vec2(smin(stone, grave, 0.05), 1.0), bottle(p4b));
+    return matUnion(vec2(smin(stone, grave, 0.1), 1.0), bottle(p4b));
 }
 
 vec3 sceneGrad(vec3 point) {
@@ -239,7 +236,7 @@ void castRay(inout Ray ray) {
 
 void phongShadeRay(inout Ray ray) {
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 3; i++) {
         vec3 lightDirection = normalize(lightdirs[i]);
         if (ray.m_intersected) {
             Mat mat = mats[ray.m_mat];
@@ -247,13 +244,13 @@ void phongShadeRay(inout Ray ray) {
             vec3 normal = -sceneGrad(ray.m_point);
 
             vec3 reflected = reflect(lightDirection, normal);
-            float diffuse = max(dot(lightDirection, normal), 0.0);
-            float specular = pow(max(dot(ray.m_direction, reflected), 0.0), mat.m_spec_exp);
+            float diffuse = abs(dot(lightDirection, normal));
+            float specular = pow(abs(dot(ray.m_direction, reflected)), mat.m_spec_exp);
       
             //oh god blackle clean this up
-            ray.m_color += (mat.m_diffuse * (diffuse + 0.1) + mat.m_specular * specular)*lightcols[i] * (vec3(1.0)-mat.m_transparency);
+            ray.m_color += (mat.m_diffuse * diffuse + mat.m_specular * specular)*lightcols[i] * (vec3(1.0)-mat.m_transparency);
         } else {
-            ray.m_color += vec3(pow(max(dot(lightDirection, ray.m_direction), 0.0), 25.0))*lightcols[i];
+            ray.m_color += vec3(pow(abs(dot(lightDirection, ray.m_direction)), 25.0))*lightcols[i];
         }
     }
 }
@@ -319,8 +316,7 @@ Ray transmissionForRay(Ray ray) {
     float sgn = sign(scene(ray.m_origin).x);
     vec3 normal = -sceneGrad(ray.m_point);
     float frensel = sqrt(abs(dot(ray.m_direction, normal)));
-    vec3 atten = ray.m_attenuation * mat.m_transparency;
-    if (mat.m_transparency.x < 0.5) atten *= frensel;
+    vec3 atten = ray.m_attenuation * mat.m_transparency * frensel;
 
     return newRay(ray.m_point - normal*eps4dist(ray.m_cumdist)*4.0*sgn, ray.m_direction, atten, ray.m_cumdist);
 }
@@ -355,7 +351,8 @@ void recursivelyRender(inout Ray ray) {
 }
 
 float grade(float val) {
-    float x = clamp(val, 0.0, 1.0);
+    // return log(val+1)*0.5;
+    float x = clamp(log(val+1), 0.0, 1.0);
     return -2.56 * x*x*x + 4.63 * x*x - 1.19 * x + 0.125;
 }
 
@@ -369,8 +366,8 @@ void main() {
     feed(state, time);
 
     // Camera parameters
-    vec3 cameraOrigin = vec3(4.0, 4.0, 4.5)*1.75;
-    vec3 cameraDirection = normalize(vec3(0.0,-1.0,-1.0)-cameraOrigin);
+    vec3 cameraOrigin = vec3(1.0, 1.0, 1.0)*5.0;
+    vec3 cameraDirection = normalize(vec3(0.0,0.0,0.0)-cameraOrigin);
     
     // Generate plate axes with Z-up. will break if pointed straight up
     // may be converted to constants in the final version...
@@ -379,14 +376,14 @@ void main() {
     vec3 plateYAxis = normalize(cross(cameraDirection, plateXAxis));
 
     //DOF with focal point at origin
-    // vec2 blur = (vec2(getFloat(state)+getFloat(state), getFloat(state)+getFloat(state)) - vec2(1.0))*0.025 * vec2(1.0, 1080.0/1920.0);
+    // vec2 blur = (vec2(getFloat(state)+getFloat(state), getFloat(state)+getFloat(state)) - vec2(1.0))*0.1 * vec2(1.0, 1080.0/1920.0);
     // cameraOrigin += plateXAxis*blur.x + plateYAxis*blur.y;
     // cameraDirection = normalize(vec3(0.0)-cameraOrigin);
     // plateXAxis = normalize(cross(cameraDirection, up));
     // plateYAxis = normalize(cross(cameraDirection, plateXAxis));
     
-    float fov = radians(30.0);
-    vec2 plateCoords = (uv * 2.0 - 1.0) * vec2(1.0, 1080.0/1920.0) + vec2(0.6, 0.075);// + vec2(getFloat(state), getFloat(state)) * 2.0/1080.0;
+    float fov = radians(40.0);
+    vec2 plateCoords = (uv * 2.0 - 1.0) * vec2(1.0, 1080.0/1920.0);// + vec2(getFloat(state), getFloat(state)) * 2.0/1080.0;
     vec3 platePoint = (plateXAxis * plateCoords.x + plateYAxis * -plateCoords.y) * tan(fov /2.0);
 
     vec3 rayDirection = normalize(platePoint + cameraDirection);
@@ -394,6 +391,6 @@ void main() {
     Ray ray = newRay(cameraOrigin, rayDirection, vec3(1.0), 0.0);
     recursivelyRender(ray);
     
-    // ray.m_color = vec3(grade(ray.m_color.x),grade(ray.m_color.y),grade(ray.m_color.z));
+    ray.m_color = vec3(grade(ray.m_color.x),grade(ray.m_color.y),grade(ray.m_color.z));
     fragColor = vec4(ray.m_color, 1.0)*(1./1.);
 }
