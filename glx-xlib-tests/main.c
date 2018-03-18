@@ -236,11 +236,10 @@ void _start() {
   glFinish();
 
   //begin collecting samples, using the shader as the renderer
-  for (int x = 0; x < 1; x++) {
-    glUniform1f(0, x);
+  // for (int x = 0; x < 1; x++) {
     glRecti(-1,-1,1,1);
     glFinish();
-  }
+  // }
 
   //blit our framebuffer to the screen
   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);

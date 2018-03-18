@@ -1,5 +1,4 @@
 #version 450
-uniform float time;
 out vec4 fragColor;
 
 struct Ray
@@ -45,14 +44,13 @@ vec3 lightcols[3] = vec3[3](
 
 float smin( float a, float b, float k )
 {
-    if (k == 0.0) return min(a,b);
+    // if (k == 0.0) return min(a,b);
     float h = clamp( 0.5+0.5*(b-a)/k, 0.0, 1.0 );
     return mix( b, a, h ) - k*h*(1.0-h);
 }
 
 float distanceToBottleCurve(vec2 point) {
     float x = point.x*2.5;
-    
     return point.y-0.1*sin(x + 0.2) + 0.05*sin(2.0*x) + 0.05*sin(3.0*x);
 }
 
@@ -73,15 +71,8 @@ vec2 smatUnion(vec2 a, vec2 b, float k) {
 }
 
 vec2 bottle(vec3 point) {
-    
-    float bound = cylinder(point, 0.4, 1.0, 0.0);
-    if (bound > 0.1) {
-        return vec2(bound, 0.0);
-    }
-    
     //blackle were you raised in a barn? fix this shit!
-    vec3 origin = vec3(0.0);
-    float dist = distance(point.xy, origin.xy);
+    float dist = distance(point.xy, vec2(0.0));
     float top = point.z;
 
     float tops = abs(top-0.05) - 0.95;
@@ -93,7 +84,7 @@ vec2 bottle(vec3 point) {
     for (int i = 0; i < 3; i++) {
         vec2 angle = vec2(cos(3.14/3.0*float(i)), sin(3.14/3.0*float(i)));
         //note, make this a call to cylinder
-        float cut = distance(vec2(dot(point.xy, angle), point.z), vec2(dot(origin.xy, angle), 0.95)) - 0.06;
+        float cut = distance(vec2(dot(point.xy, angle), point.z), vec2(dot(vec2(0.0), angle), 0.95)) - 0.06;
         shell = -smin(-shell, cut, 0.1);
     }
     
@@ -105,13 +96,12 @@ vec2 bottle(vec3 point) {
     shell = min(lip, shell);
     
     float label = cylinder(point*3.1 + vec3(0.0,0.0,-0.75), 1.0, 1.0, 0.1) / 2.9;
-    
-    vec2 uni = vec2(shell, 1.0);
-    uni = smatUnion(uni, vec2(label, 0.0), 0.02);
-    uni = smatUnion(uni, vec2(lid, 2.0), 0.02);
-    return uni;
-    //to get interior
-    //return max(shell, -shell - 0.01)*0.95 + 0.003;
+
+    return smatUnion(smatUnion(
+        vec2(shell, 1.0),
+        vec2(label, 0.0), 0.02),
+        vec2(lid, 2.0), 0.02);
+    // return uni;
 }
 
 vec2 scene(vec3 point) {
@@ -251,11 +241,9 @@ vec3 grade(vec3 val) {
     return -2.56 * x*x*x + 4.63 * x*x - 1.19 * x + 0.125;
 }
 
-#define SAMPLES 1.0
 void main() {
     // Normalized pixel coordinates (from -1 to 1)
-    vec2 offset = vec2(mod(time, SAMPLES), floor(time/SAMPLES))/SAMPLES;
-    vec2 uv = (gl_FragCoord.xy + offset - vec2(960.0, 540.0))/vec2(960.0, 960.0);
+    vec2 uv = (gl_FragCoord.xy - vec2(960.0, 540.0))/vec2(960.0, 960.0);
 
     // Camera parameters
     vec3 cameraOrigin = vec3(5.0, 5.0, 5.0);
@@ -266,7 +254,6 @@ void main() {
 
     Ray ray = newRay(cameraOrigin, rayDirection, vec3(1.0), 0.0);
     recursivelyRender(ray);
-    
-    ray.m_color = grade(ray.m_color);
-    fragColor = vec4(ray.m_color, 1.0)*(1./(SAMPLES*SAMPLES));
+
+    fragColor = vec4(grade(ray.m_color), 1.0);
 }
