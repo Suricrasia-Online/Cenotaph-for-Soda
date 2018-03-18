@@ -8,7 +8,7 @@
 #include<GL/gl.h>
 #include<GL/glx.h>
 #include<GL/glu.h>
-#include<pango/pangocairo.h>
+#include<cairo/cairo.h>
 
 #include "cairo-private.h"
 
@@ -17,6 +17,14 @@
 
 #define CANVAS_WIDTH 1920
 #define CANVAS_HEIGHT 1080
+
+struct _textloc {
+  char* text;
+  char* font;
+  cairo_matrix_t matrix;
+  float origin_x;
+  float origin_y;
+}; 
 
 
 __attribute__((force_align_arg_pointer))
@@ -81,29 +89,101 @@ void _start() {
   cairo_surface_t* cairoSurf = cairo_image_surface_create_for_data(data, CAIRO_FORMAT_ARGB32, CANVAS_WIDTH, CANVAS_HEIGHT, 4 * CANVAS_WIDTH);
   cairo_t* cairoCtx = cairo_create(cairoSurf);
 
-  cairo_select_font_face(cairoCtx, "DejaVu Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
+  
   // cairo_set_font_matrix(cairoCtx, &matrix);
   // printf("xx: %f, xy: %f, yy: %f, yx: %f, x0: %f, y0: %f\n", matrix.xx, matrix.xy, matrix.yy, matrix.yx, matrix.x0, matrix.y0);
 
-  char *text[9] = {
-    "",
-    "rip lol",
-    "",
-    "",
-    "  gg no re",
-    "",
-    "how do i",
-    "rotate text",
-    "in ms paint"};
-  for (int i = 0; i < 3; i++) {
-    for (int j = 0; j < 3; j++) {
-      cairo_matrix_t matrix = {.xx = 50 - i*10, .xy = (i == 2) ? 0 : -10, .yy = -50 + i*10, .yx = (i == 2) ? 0 : 20, .x0 = 180 + i*400, .y0 = 600 + i*180};
-      cairoCtx->backend->set_font_matrix(cairoCtx, &matrix);
-      cairoCtx->backend->move_to(cairoCtx, 0, -40.0*j);
-      // cairo_move_to(cairoCtx, );
-      cairo_show_text(cairoCtx, text[i*3+j]);
+  struct _textloc texts[8] = {
+    { 
+      .text = "rip lol",
+      .font = "FreeSans",
+      .matrix = {.xx = 50, .xy = -10, .yy = -50, .yx = 20, .x0 = 0, .y0 = 0},
+      .origin_x = 190,
+      .origin_y = 550,
+    },
+    { 
+      .text = "gg no re",
+      .font = "FreeSans",
+      .matrix = {.xx = 35, .xy = -6, .yy = -35, .yx = 15, .x0 = 0, .y0 = 0},
+      .origin_x = 640,
+      .origin_y = 760,
+    },
+    { 
+      .text = "how do i",
+      .font = "FreeSans",
+      .matrix = {.xx = 25, .xy = 0, .yy = -25, .yx = 0, .x0 = 0, .y0 = 0},
+      .origin_x = 985,
+      .origin_y = 975,
+    },
+    { 
+      .text = "rotate text",
+      .font = "FreeSans",
+      .matrix = {.xx = 25, .xy = 0, .yy = -25, .yx = 0, .x0 = 0, .y0 = 0},
+      .origin_x = 985,
+      .origin_y = 950,
+    },
+    { 
+      .text = "in ms paint",
+      .font = "FreeSans",
+      .matrix = {.xx = 25, .xy = 0, .yy = -25, .yx = 0, .x0 = 0, .y0 = 0},
+      .origin_x = 985,
+      .origin_y = 925,
+    },
+    { 
+      .text = "In Commemoration of All",
+      .font = "URW Chancery L",
+      .matrix = {.xx = 70, .xy = 0, .yy = -70, .yx = 0, .x0 = 0, .y0 = 0},
+      .origin_x = 1250,
+      .origin_y = 240,
+    },
+    { 
+      .text = "the Soda That I Consumed",
+      .font = "URW Chancery L",
+      .matrix = {.xx = 70, .xy = 0, .yy = -70, .yx = 0, .x0 = 0, .y0 = 0},
+      .origin_x = 1200,
+      .origin_y = 180,
+    },
+    { 
+      .text = "in the Making of This Demo",
+      .font = "URW Chancery L",
+      .matrix = {.xx = 70, .xy = 0, .yy = -70, .yx = 0, .x0 = 0, .y0 = 0},
+      .origin_x = 1150,
+      .origin_y = 120,
     }
+    // { 
+    //   .text = "how do i",
+    //   .matrix = {.xx = 50, .xy = -10, .yy = -50, .yx = 20, .x0 = 0, .y0 = 0},
+    //   .origin_x = 180,
+    //   .origin_y = 550,
+    // }
+  };
+
+  for (int i = 0; i < 8; i++) {
+    cairo_select_font_face(cairoCtx, texts[i].font, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
+    cairoCtx->backend->set_font_matrix(cairoCtx, &texts[i].matrix);
+    cairoCtx->backend->move_to(cairoCtx, texts[i].origin_x, texts[i].origin_y);
+    cairo_show_text(cairoCtx, texts[i].text);
   }
+
+  // char *text[9] = {
+  //   "",
+  //   "rip lol",
+  //   "",
+  //   "",
+  //   "  gg no re",
+  //   "",
+  //   "how do i",
+  //   "rotate text",
+  //   "in ms paint"};
+  // for (int i = 0; i < 3; i++) {
+  //   for (int j = 0; j < 3; j++) {
+  //     cairo_matrix_t matrix = {.xx = 50 - i*10, .xy = (i == 2) ? 0 : -10, .yy = -50 + i*10, .yx = (i == 2) ? 0 : 20, .x0 = 180 + i*400, .y0 = 600 + i*180};
+  //     cairoCtx->backend->set_font_matrix(cairoCtx, &matrix);
+  //     cairoCtx->backend->move_to(cairoCtx, 0, -40.0*j);
+  //     // cairo_move_to(cairoCtx, );
+  //     cairo_show_text(cairoCtx, text[i*3+j]);
+  //   }
+  // }
 
   //make this not shitty?
   for (int i = 0; i < 4 * CANVAS_HEIGHT * CANVAS_WIDTH; i++) {
@@ -126,6 +206,7 @@ void _start() {
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
     GL_TEXTURE_2D, textureA, 0);
 
+/*
   //compile shader
   GLuint f = glCreateShader(GL_FRAGMENT_SHADER);
   glShaderSource(f, 1, &shader_frag_min, NULL);
@@ -166,7 +247,7 @@ void _start() {
     }
   #endif
 
-  glUseProgram(p);
+  glUseProgram(p);*/
 
   //switch to using our framebuffer
   glBindFramebuffer(GL_FRAMEBUFFER, fboA);

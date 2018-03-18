@@ -245,9 +245,9 @@ void recursivelyRender(inout Ray ray) {
     }
 }
 
-float grade(float val) {
+vec3 grade(vec3 val) {
     // return log(val+1)*0.5;
-    float x = clamp(log(val+1), 0.0, 1.0);
+    vec3 x = clamp(log(val+1), 0.0, 1.0);
     return -2.56 * x*x*x + 4.63 * x*x - 1.19 * x + 0.125;
 }
 
@@ -267,6 +267,6 @@ void main() {
     Ray ray = newRay(cameraOrigin, rayDirection, vec3(1.0), 0.0);
     recursivelyRender(ray);
     
-    ray.m_color = vec3(grade(ray.m_color.x),grade(ray.m_color.y),grade(ray.m_color.z));
+    ray.m_color = grade(ray.m_color);
     fragColor = vec4(ray.m_color, 1.0)*(1./(SAMPLES*SAMPLES));
 }
