@@ -206,7 +206,6 @@ void _start() {
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
     GL_TEXTURE_2D, textureA, 0);
 
-/*
   //compile shader
   GLuint f = glCreateShader(GL_FRAGMENT_SHADER);
   glShaderSource(f, 1, &shader_frag_min, NULL);
@@ -247,7 +246,7 @@ void _start() {
     }
   #endif
 
-  glUseProgram(p);*/
+  glUseProgram(p);
 
   //switch to using our framebuffer
   glBindFramebuffer(GL_FRAMEBUFFER, fboA);
