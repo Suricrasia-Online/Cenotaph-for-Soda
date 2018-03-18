@@ -53,10 +53,10 @@ Mat mats[4] = Mat[4](
 
 //choose good positions...
 vec3 lightdirs[4] = vec3[4](
-    vec3(-4.0, -0.5, -1.0),
-    vec3(4.0, -0.5, 1.0),
+    vec3(-0.3, -1.0, -1.0),
+    vec3(-1.0, -0.3, -1.0),
     vec3(-1.0, -1.0, -0.3),
-    vec3(1.0, -1.0, 1.0)
+    vec3(1.0, 1.0, 1.0)
 );
 
 vec3 lightcols[4] = vec3[4](
@@ -105,14 +105,14 @@ float smin( float a, float b, float k )
     return mix( b, a, h ) - k*h*(1.0-h);
 }
 
-float unitSquare(vec3 point) {
-    vec3 ptabs = abs(point);
-    return max(max(ptabs.x, ptabs.y), ptabs.z) - 1.0;
-}
-
 float rectangle(vec3 point, float w, float l, float h, float s) {
     vec3 ptabs = abs(point);
     return -smin(smin(w - ptabs.x, l - ptabs.y, s), h - ptabs.z, s);
+}
+
+float tombstone(vec3 point, float w, float l, float h, float s, float s2) {
+    vec3 ptabs = abs(point);
+    return -smin(smin(w - ptabs.x, h - ptabs.z, s2), l - ptabs.y, s);
 }
 
 // float unitSquareFrame(vec3 point) {
@@ -188,12 +188,13 @@ vec2 scene(vec3 point) {
             : vec3(0.0));
 
 
-    vec3 p = point - offset;
+    vec3 p = point;// - offset;
     float grave = -smin(-p.z, rectangle(p, 0.6 + p.z*0.1, 1.2 + p.z*0.1, 1.5, 0.1), 0.1);
+    float stone = tombstone(p + vec3(0.0, 1.5, 0.0), 0.5 - p.z*0.01, 0.1 - p.z*0.01, 1.2, 0.05, 0.5);
     vec3 p4b = (p - vec3(0.0, 0.0, -1.0)).zxy;
 
     // return bottle(p4b);
-    return matUnion(vec2(grave, 3.0), bottle(p4b));
+    return matUnion(vec2(smin(stone, grave, 0.05), 1.0), bottle(p4b));
 }
 
 vec3 sceneGrad(vec3 point) {
@@ -210,7 +211,7 @@ Ray newRay(vec3 origin, vec3 direction, vec3 attenuation, float cumdist) {
 }
 
 float eps4dist(float dist) {
-    return 0.00025*dist;
+    return 0.0005*dist;
 }
 
 void castRay(inout Ray ray) {
@@ -228,7 +229,7 @@ void castRay(inout Ray ray) {
         if (abs(res) < eps4dist(dist)) {
             ray.m_intersected = true;
             ray.m_mat = int(smpl.y);
-            ray.m_cumdist += dist;
+            ray.m_cumdist = dist;
             break;
         }
         
@@ -324,7 +325,7 @@ Ray transmissionForRay(Ray ray) {
     return newRay(ray.m_point - normal*eps4dist(ray.m_cumdist)*4.0*sgn, ray.m_direction, atten, ray.m_cumdist);
 }
 
-#define QUEUELEN 16
+#define QUEUELEN 20
 Ray rayQueue[QUEUELEN];
 int raynum;
 void addToQueue(Ray ray) {
@@ -344,14 +345,13 @@ void recursivelyRender(inout Ray ray) {
         castRay(rayQueue[i]);
         phongShadeRay(rayQueue[i]);
         if (rayQueue[i].m_intersected) {
-            // addToQueue(reflectionForRay(rayQueue[i]));
+            if(raynum < 10) addToQueue(reflectionForRay(rayQueue[i]));
             addToQueue(transmissionForRay(rayQueue[i]));
         }
     }
     for (int i = 0; i < raynum; i++) {
         ray.m_color += rayQueue[i].m_color * rayQueue[i].m_attenuation;
     }
-    // ray = rayQueue[0];
 }
 
 float grade(float val) {
@@ -369,8 +369,8 @@ void main() {
     feed(state, time);
 
     // Camera parameters
-    vec3 cameraOrigin = vec3(4.0, 2.0, 2.5)*2.0;
-    vec3 cameraDirection = normalize(vec3(0.0,-1.3,-1.0)-cameraOrigin);
+    vec3 cameraOrigin = vec3(4.0, 4.0, 4.5)*1.75;
+    vec3 cameraDirection = normalize(vec3(0.0,-1.0,-1.0)-cameraOrigin);
     
     // Generate plate axes with Z-up. will break if pointed straight up
     // may be converted to constants in the final version...
@@ -386,12 +386,12 @@ void main() {
     // plateYAxis = normalize(cross(cameraDirection, plateXAxis));
     
     float fov = radians(30.0);
-    vec2 plateCoords = (uv * 2.0 - 1.0) * vec2(1.0, 1080.0/1920.0);// + vec2(getFloat(state), getFloat(state)) * 2.0/1080.0;
+    vec2 plateCoords = (uv * 2.0 - 1.0) * vec2(1.0, 1080.0/1920.0) + vec2(0.6, 0.075);// + vec2(getFloat(state), getFloat(state)) * 2.0/1080.0;
     vec3 platePoint = (plateXAxis * plateCoords.x + plateYAxis * -plateCoords.y) * tan(fov /2.0);
 
     vec3 rayDirection = normalize(platePoint + cameraDirection);
 
-    Ray ray = newRay(cameraOrigin + rayDirection*2.0, rayDirection, vec3(1.0), 0.0);
+    Ray ray = newRay(cameraOrigin, rayDirection, vec3(1.0), 0.0);
     recursivelyRender(ray);
     
     // ray.m_color = vec3(grade(ray.m_color.x),grade(ray.m_color.y),grade(ray.m_color.z));
