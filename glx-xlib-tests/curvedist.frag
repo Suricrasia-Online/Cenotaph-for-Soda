@@ -51,11 +51,12 @@ Mat mats[4] = Mat[4](
     Mat(vec3(0.8, 0.9, 0.9), vec3(0.5), 15.0, vec3(0.1), vec3(0.95)) //outer plastic
 );
 
+//choose good positions...
 vec3 lightdirs[4] = vec3[4](
-    vec3(-0.3, -1.0, -1.0),
-    vec3(-1.0, -0.3, -1.0),
+    vec3(-4.0, -0.5, -1.0),
+    vec3(4.0, -0.5, 1.0),
     vec3(-1.0, -1.0, -0.3),
-    vec3(1.0, 1.0, 1.0)
+    vec3(1.0, -1.0, 1.0)
 );
 
 vec3 lightcols[4] = vec3[4](
@@ -178,13 +179,21 @@ vec2 bottle(vec3 point) {
 }
 
 vec2 scene(vec3 point) {
-    vec3 repeated = vec3(mod(point.x - 1.0, 2.0) - 1.0, point.yz);
-    float grave = -smin(-repeated.z, rectangle(repeated, 0.5, 1.1, 1.5, 0.1), 0.1);
-    vec3 p4b = (repeated - vec3(0.0, 0.0, -1.0)).zxy;
+
+    // return bottle(p4b);
+    vec3 offset = point.x > 1.0
+        ? vec3(2.0, 0.0, 0.0)
+        : (point.x < -1.0
+            ? vec3(-2.0, 0.0, 0.0)
+            : vec3(0.0));
+
+
+    vec3 p = point - offset;
+    float grave = -smin(-p.z, rectangle(p, 0.6 + p.z*0.1, 1.2 + p.z*0.1, 1.5, 0.1), 0.1);
+    vec3 p4b = (p - vec3(0.0, 0.0, -1.0)).zxy;
 
     // return bottle(p4b);
     return matUnion(vec2(grave, 3.0), bottle(p4b));
-    // return bottle(point);
 }
 
 vec3 sceneGrad(vec3 point) {
@@ -335,7 +344,7 @@ void recursivelyRender(inout Ray ray) {
         castRay(rayQueue[i]);
         phongShadeRay(rayQueue[i]);
         if (rayQueue[i].m_intersected) {
-            if (i < 10) addToQueue(reflectionForRay(rayQueue[i]));
+            // addToQueue(reflectionForRay(rayQueue[i]));
             addToQueue(transmissionForRay(rayQueue[i]));
         }
     }
@@ -377,7 +386,7 @@ void main() {
     // plateYAxis = normalize(cross(cameraDirection, plateXAxis));
     
     float fov = radians(30.0);
-    vec2 plateCoords = (uv * 2.0 - 1.0) * vec2(1.0, 1080.0/1920.0) + vec2(getFloat(state), getFloat(state)) * 2.0/1080.0;
+    vec2 plateCoords = (uv * 2.0 - 1.0) * vec2(1.0, 1080.0/1920.0);// + vec2(getFloat(state), getFloat(state)) * 2.0/1080.0;
     vec3 platePoint = (plateXAxis * plateCoords.x + plateYAxis * -plateCoords.y) * tan(fov /2.0);
 
     vec3 rayDirection = normalize(platePoint + cameraDirection);

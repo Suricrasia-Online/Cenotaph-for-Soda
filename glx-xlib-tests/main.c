@@ -8,12 +8,16 @@
 #include<GL/gl.h>
 #include<GL/glx.h>
 #include<GL/glu.h>
+#include<pango/pangocairo.h>
+
+#include "cairo-private.h"
 
 #include "shader.h"
-#define DEBUG true
+// #define DEBUG true
 
 #define CANVAS_WIDTH 1920
 #define CANVAS_HEIGHT 1080
+
 
 __attribute__((force_align_arg_pointer))
 void _start() {
@@ -66,6 +70,35 @@ void _start() {
   //oh yeah grab the keyboard
   XGrabKeyboard(dpy, win, true, GrabModeAsync, GrabModeAsync, CurrentTime);
 
+  //initialize the render with some text
+  unsigned char data[4 * CANVAS_HEIGHT * CANVAS_WIDTH];
+
+  //make this not shitty?
+  for (int i = 0; i < 4 * CANVAS_HEIGHT * CANVAS_WIDTH; i++) {
+    data[i] = 0xFF;
+  }
+
+  cairo_surface_t* cairoSurf = cairo_image_surface_create_for_data(data, CAIRO_FORMAT_ARGB32, CANVAS_WIDTH, CANVAS_HEIGHT, 4 * CANVAS_WIDTH);
+  cairo_t* cairoCtx = cairo_create(cairoSurf);
+
+  cairo_select_font_face(cairoCtx, "Ubuntu Mono", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
+  cairo_matrix_t matrix = {.xx = 70, .xy = 0, .yy = -40, .yx = 10, .x0 = 50, .y0 = 870};
+  // cairo_set_font_matrix(cairoCtx, &matrix);
+  cairoCtx->backend->set_font_matrix(cairoCtx, &matrix);
+  // printf("xx: %f, xy: %f, yy: %f, yx: %f, x0: %f, y0: %f\n", matrix.xx, matrix.xy, matrix.yy, matrix.yx, matrix.x0, matrix.y0);
+
+  char *text[7] = {"Suricrasia Online Presents:", "A \"Polyethylene Cenotaph\"", "in Commemoration of", "All the Soda That", "Blackle Drank in", "the Making of", "This Demo"};
+  for (int i = 0; i < 7; i++) {
+    cairoCtx->backend->move_to(cairoCtx, 20.0*i, -70.0*i);
+    // cairo_move_to(cairoCtx, );
+    cairo_show_text(cairoCtx, text[i]);
+  }
+
+  //make this not shitty?
+  for (int i = 0; i < 4 * CANVAS_HEIGHT * CANVAS_WIDTH; i++) {
+    data[i] = 0xFF - data[i];
+  }
+
   //create a floating point backing texture for a framebuffer
   GLuint textureA;
   glEnable(GL_TEXTURE_2D);
@@ -73,8 +106,7 @@ void _start() {
   glBindTexture(GL_TEXTURE_2D, textureA);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, CANVAS_WIDTH, CANVAS_HEIGHT, 0, GL_RGBA,
-    GL_FLOAT, NULL);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, CANVAS_WIDTH, CANVAS_HEIGHT, 0, GL_BGRA, GL_UNSIGNED_BYTE, data);
 
   //create a framebuffer we can render everything to
   GLuint fboA;
@@ -129,7 +161,7 @@ void _start() {
   glBindFramebuffer(GL_FRAMEBUFFER, fboA);
 
   //clear it
-  glClear(GL_COLOR_BUFFER_BIT);
+  // glClear(GL_COLOR_BUFFER_BIT);
 
   //enable additive blending so we don't have to do so in the shader
   glEnable(GL_BLEND);
