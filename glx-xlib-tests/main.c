@@ -5,259 +5,267 @@
 #include<stdint.h>
 #include<X11/X.h>
 #include<X11/Xlib.h>
+#include<X11/extensions/Xrandr.h>
 #include<GL/gl.h>
 #include<GL/glx.h>
 #include<GL/glu.h>
+#include<cairo/cairo.h>
+
+#include "cairo-private.h"
 
 #include "shader.h"
-#define DEBUG true
-
-static inline void swap(GLuint* t1, GLuint* t2) {
-    GLuint temp = *t1;
-    *t1 = *t2;
-    *t2 = temp;
-}
+// #define DEBUG true
 
 #define CANVAS_WIDTH 1920
 #define CANVAS_HEIGHT 1080
 
-static inline void render(GLuint program, GLuint fb, GLuint tex, float time) {
-glBindFramebuffer(GL_FRAMEBUFFER, fb);
-// glViewport(0,0, CANVAS_WIDTH, CANVAS_HEIGHT);
+struct _textloc {
+  char* font;
+  char* text;
+  cairo_matrix_t matrix;
+  float origin_x;
+  float origin_y;
+}; 
 
-glActiveTexture(GL_TEXTURE0);
-glBindTexture(GL_TEXTURE_2D, tex);
-glUniform1i(0, 0);
-glUniform1f(1, time);
-
-glRecti(-1,-1,1,1);
-}
+static unsigned char fbdata[4 * CANVAS_HEIGHT * CANVAS_WIDTH];
 
 __attribute__((force_align_arg_pointer))
 void _start() {
+  //initialize the window
+  Display* dpy = XOpenDisplay(NULL);
 
-Display* dpy = XOpenDisplay(NULL);
- 
-Window root = DefaultRootWindow(dpy);
-GLint att[] = { GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None };
-XVisualInfo* vi = glXChooseVisual(dpy, 0, att);
+  Window root = DefaultRootWindow(dpy);
 
+  int num_sizes;
+  XRRScreenSize* sizes = XRRSizes(dpy, 0, &num_sizes);
+  for (int i = 0; i < num_sizes; i++) {
+    if (sizes[i].width == 1920 && sizes[i].height == 1080) {
+      XRRScreenConfiguration* conf = XRRGetScreenInfo(dpy, root);
+      XRRSetScreenConfig(dpy, conf, root, i, RR_Rotate_0, CurrentTime);
+      break;
+    }
+  }
 
-Colormap cmap = XCreateColormap(dpy, root, vi->visual, AllocNone);
+  GLint att[] = { GLX_RGBA, None };
+  XVisualInfo* vi = glXChooseVisual(dpy, 0, att);
 
-Cursor cursor;
-Pixmap csr;
-XColor xcolor;
-static char csr_bits[] = {0x00};
+  //I really hate this and I wish this call was unneeded. it feels useless
+  Colormap cmap = XCreateColormap(dpy, root, vi->visual, AllocNone);
 
-csr= XCreateBitmapFromData(dpy,root,csr_bits,1,1);
-cursor= XCreatePixmapCursor(dpy,csr,csr,&xcolor,&xcolor,1,1); 
+  //hide cursor
+  // static char csr_bits[] = {0x00};
+  XColor xcolor;
+  Pixmap csr= XCreatePixmap(dpy,root,1,1,1);
+  Cursor cursor= XCreatePixmapCursor(dpy,csr,csr,&xcolor,&xcolor,1,1); 
 
-XSetWindowAttributes    swa;
-swa.colormap = cmap;
-swa.override_redirect = 1;
-swa.event_mask = ExposureMask | KeyPressMask;
-swa.cursor = cursor;
-Window win = XCreateWindow(dpy, root, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, 0, vi->depth, InputOutput, vi->visual, CWColormap | CWEventMask | CWOverrideRedirect | CWCursor, &swa);
+  //this enables things like events, fullscreen, and sets the invisible cursor
+  XSetWindowAttributes swa;
+  swa.colormap = cmap;
+  swa.override_redirect = 1;
+  swa.event_mask = ExposureMask | KeyPressMask;
+  swa.cursor = cursor;
+  Window win = XCreateWindow(dpy, root, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, 0, vi->depth, InputOutput, vi->visual, CWColormap | CWEventMask | CWOverrideRedirect | CWCursor, &swa);
 
- XMapWindow(dpy, win);
+  // XStoreName(dpy, win, "POLYETHYLENE CENOTAPH");
 
+  //this actually opens the window
+  XMapWindow(dpy, win);
 
-// XStoreName(dpy, win, "Shark Girls Rule The World");
-GLXContext glc = glXCreateContext(dpy, vi, NULL, 1);
+  //now we can do opengl calls!!!!
+  GLXContext glc = glXCreateContext(dpy, vi, NULL, 1);
 
-#ifdef DEBUG
-if (glc == NULL) {
-  return;
-}
-#endif
+  #ifdef DEBUG
+    if (glc == NULL) {
+      return;
+    }
+  #endif
 
-glXMakeCurrent(dpy, win, glc);
+  glXMakeCurrent(dpy, win, glc);
 
+  //clear to black and use glfinish to make sure it propagates to the screen before we start shader compilation
+  // glViewport(0,0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  // typedef void (*voidWithNoParams)();
+  // voidWithNoParams glClearColorArbitrary = (voidWithNoParams)glClearColor;
+  // (*glClearColorArbitrary)();
+  // glClearColor(0.0,0.0,0.0,0.0);
+  glClear(GL_COLOR_BUFFER_BIT);
+  // glFinish();
 
-glBindFramebuffer(GL_FRAMEBUFFER, 0);
-glViewport(0,0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  //oh yeah grab the keyboard
+  XGrabKeyboard(dpy, win, true, GrabModeAsync, GrabModeAsync, CurrentTime);
 
-glClearColor(0.0,0.0,0.0,0.0);
-glClear(GL_COLOR_BUFFER_BIT);
+  //initialize the render with some text
+  cairo_surface_t* cairoSurf = cairo_image_surface_create_for_data(fbdata, CAIRO_FORMAT_ARGB32, CANVAS_WIDTH, CANVAS_HEIGHT, 4 * CANVAS_WIDTH);
+  cairo_t* cairoCtx = cairo_create(cairoSurf);
 
-glXSwapBuffers(dpy, win);
+  // cairo_set_font_matrix(cairoCtx, &matrix);
+  // printf("xx: %f, xy: %f, yy: %f, yx: %f, x0: %f, y0: %f\n", matrix.xx, matrix.xy, matrix.yy, matrix.yx, matrix.x0, matrix.y0);
 
-GLuint textureA;
-glEnable(GL_TEXTURE_2D);
-glGenTextures(1, &textureA);
-glBindTexture(GL_TEXTURE_2D, textureA);
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-// glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-// glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, CANVAS_WIDTH, CANVAS_HEIGHT, 0, GL_RGBA,
-  GL_FLOAT, NULL);
+  const static struct _textloc texts[8] = {
+    { 
+      .text = "rip lol",
+      .font = "FreeSans",
+      .matrix = {.xx = 50, .xy = -10, .yy = -50, .yx = 20, .x0 = 0, .y0 = 0},
+      .origin_x = 190,
+      .origin_y = 550,
+    },
+    { 
+      .text = "gg no re",
+      .font = "FreeSans",
+      .matrix = {.xx = 35, .xy = -6, .yy = -35, .yx = 15, .x0 = 0, .y0 = 0},
+      .origin_x = 640,
+      .origin_y = 760,
+    },
+    { 
+      .text = "how do i",
+      .font = "FreeSans",
+      .matrix = {.xx = 25, .xy = 0, .yy = -25, .yx = 0, .x0 = 0, .y0 = 0},
+      .origin_x = 985,
+      .origin_y = 975,
+    },
+    { 
+      .text = "rotate text",
+      .font = "FreeSans",
+      .matrix = {.xx = 25, .xy = 0, .yy = -25, .yx = 0, .x0 = 0, .y0 = 0},
+      .origin_x = 985,
+      .origin_y = 950,
+    },
+    { 
+      .text = "in ms paint",
+      .font = "FreeSans",
+      .matrix = {.xx = 25, .xy = 0, .yy = -25, .yx = 0, .x0 = 0, .y0 = 0},
+      .origin_x = 985,
+      .origin_y = 925,
+    },
+    { 
+      .text = "In Commemoration of All",
+      .font = "URW Chancery L",
+      .matrix = {.xx = 70, .xy = 0, .yy = -70, .yx = 0, .x0 = 0, .y0 = 0},
+      .origin_x = 1200,
+      .origin_y = 220,
+    },
+    { 
+      .text = "the Soda that I Consumed",
+      .font = "URW Chancery L",
+      .matrix = {.xx = 70, .xy = 0, .yy = -70, .yx = 0, .x0 = 0, .y0 = 0},
+      .origin_x = 1150,
+      .origin_y = 160,
+    },
+    { 
+      .text = "in the Making of this Demo",
+      .font = "URW Chancery L",
+      .matrix = {.xx = 70, .xy = 0, .yy = -70, .yx = 0, .x0 = 0, .y0 = 0},
+      .origin_x = 1100,
+      .origin_y = 100,
+    }
+  };
 
-GLuint fboA;
-glGenFramebuffers(1, &fboA);
-glBindFramebuffer(GL_FRAMEBUFFER, fboA);
-glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-  GL_TEXTURE_2D, textureA, 0);
+  cairoCtx->backend->set_source_rgba(cairoCtx, 1.0, 1.0, 1.0, 1.0);
+  for (int i = 0; i < 8; i++) {
+    // printf("%f, %f, %s\n", texts[i].origin_x, texts[i].origin_y, texts[i].text);
+    cairo_select_font_face(cairoCtx, texts[i].font, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
+    cairoCtx->backend->set_font_matrix(cairoCtx, &texts[i].matrix);
+    cairoCtx->backend->move_to(cairoCtx, texts[i].origin_x, texts[i].origin_y);
+    cairo_show_text(cairoCtx, texts[i].text);
+  }
 
-GLuint textureB;
-glEnable(GL_TEXTURE_2D);
-glGenTextures(1, &textureB);
-glBindTexture(GL_TEXTURE_2D, textureB);
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-// glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-// glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, CANVAS_WIDTH, CANVAS_HEIGHT, 0, GL_RGBA,
-  GL_FLOAT, NULL);
+  // //make this not shitty?
+  // for (int i = 0; i < 4 * CANVAS_HEIGHT * CANVAS_WIDTH; i++) {
+  //   data[i] = 0xFF - data[i];
+  // }
 
-GLuint fboB;
-glGenFramebuffers(1, &fboB);
-glBindFramebuffer(GL_FRAMEBUFFER, fboB);
-glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-  GL_TEXTURE_2D, textureB, 0);
+  //create a floating point backing texture for a framebuffer
+  GLuint textureA;
+  glEnable(GL_TEXTURE_2D);
+  glGenTextures(1, &textureA);
+  glBindTexture(GL_TEXTURE_2D, textureA);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, CANVAS_WIDTH, CANVAS_HEIGHT, 0, GL_BGRA, GL_UNSIGNED_BYTE, fbdata);
 
-GLuint f = glCreateShader(GL_FRAGMENT_SHADER);
-glShaderSource(f, 1, &shader_frag_min, NULL);
-glCompileShader(f);
+  //create a framebuffer we can render everything to
+  GLuint fboA;
+  glGenFramebuffers(1, &fboA);
+  glBindFramebuffer(GL_FRAMEBUFFER, fboA);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+    GL_TEXTURE_2D, textureA, 0);
 
-#ifdef DEBUG
-GLint isCompiled = 0;
-glGetShaderiv(f, GL_COMPILE_STATUS, &isCompiled);
-if(isCompiled == GL_FALSE) {
+  //compile shader
+  GLuint f = glCreateShader(GL_FRAGMENT_SHADER);
+  glShaderSource(f, 1, &shader_frag_min, NULL);
+  glCompileShader(f);
 
-  GLint maxLength = 0;
-  glGetShaderiv(f, GL_INFO_LOG_LENGTH, &maxLength);
-  printf("fuck: %d\n", maxLength);
+  #ifdef DEBUG
+    GLint isCompiled = 0;
+    glGetShaderiv(f, GL_COMPILE_STATUS, &isCompiled);
+    if(isCompiled == GL_FALSE) {
+      GLint maxLength = 0;
+      glGetShaderiv(f, GL_INFO_LOG_LENGTH, &maxLength);
 
-  // The maxLength includes the NULL character
-  char* error = malloc(maxLength);
-  glGetShaderInfoLog(f, maxLength, &maxLength, error);
-  printf("%s\n", error);
+      char* error = malloc(maxLength);
+      glGetShaderInfoLog(f, maxLength, &maxLength, error);
+      printf("%s\n", error);
 
-  // Provide the infolog in whatever manor you deem best.
-  // Exit with failure.
-  // glDeleteShader(shader); // Don't leak the shader.
+      exit(-10);
+    }
+  #endif
 
-exit(-10);
-
-}
-#endif
- 
+  //link shader
   GLuint p = glCreateProgram();
   glAttachShader(p,f);
- 
   glLinkProgram(p);
 
-#ifdef DEBUG
-  GLint isLinked = 0;
-glGetProgramiv(p, GL_LINK_STATUS, (int *)&isLinked);
-if (isLinked == GL_FALSE)
-{
-  GLint maxLength = 0;
-  glGetProgramiv(p, GL_INFO_LOG_LENGTH, &maxLength);
+  #ifdef DEBUG
+    GLint isLinked = 0;
+    glGetProgramiv(p, GL_LINK_STATUS, (int *)&isLinked);
+    if (isLinked == GL_FALSE) {
+      GLint maxLength = 0;
+      glGetProgramiv(p, GL_INFO_LOG_LENGTH, &maxLength);
 
-  // The maxLength includes the NULL character
-  char* error = malloc(maxLength);
-  glGetProgramInfoLog(p, maxLength, &maxLength,error);
-  printf("%s\n", error);
+      char* error = malloc(maxLength);
+      glGetProgramInfoLog(p, maxLength, &maxLength,error);
+      printf("%s\n", error);
 
-  // Use the infoLog as you see fit.
-  
-  // In this simple program, we'll just leave
+      exit(-10);
+    }
+  #endif
 
-exit(-10);
+  glUseProgram(p);
+
+  //switch to using our framebuffer
+  glBindFramebuffer(GL_FRAMEBUFFER, fboA);
+
+  //clear it
+  // glClear(GL_COLOR_BUFFER_BIT);
+
+  //enable additive blending so we don't have to do so in the shader
+  glEnable(GL_BLEND);
+  // glBlendEquationSeparate( GL_FUNC_SUBTRACT, GL_FUNC_ADD);
+  glBlendFuncSeparate( GL_ONE, GL_ONE, GL_ONE, GL_ONE);
+
+  // glFinish();
+  glRecti(-1,-1,1,1);
+  // glFinish();
+
+  //blit our framebuffer to the screen
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, fboA);
+  glBlitFramebuffer(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+
+  while(1) {
+    XEvent xev;
+    XNextEvent(dpy, &xev);
+
+    //wait for escape key, then exit without glib :3
+    if(xev.type == KeyPress && xev.xkey.keycode == 0x09) {
+      //blackle mori no likey AT&T
+      asm volatile(".intel_syntax noprefix");
+      asm volatile("push 60");
+      asm volatile("pop rax");
+      asm volatile("xor edi, edi");
+      asm volatile("syscall");
+      asm volatile(".att_syntax prefix");
+      __builtin_unreachable();
+    }
+  }
 }
-#endif
-
-glUseProgram(p);
-
-XGrabKeyboard(dpy, win, true, GrabModeAsync, GrabModeAsync, CurrentTime);
-
-glBindFramebuffer(GL_FRAMEBUFFER, fboA);
-// glViewport(0,0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-// glClearColor(0.0,0.0,0.0,0.0);
-glClear(GL_COLOR_BUFFER_BIT);
-
-glBindFramebuffer(GL_FRAMEBUFFER, fboB);
-// glViewport(0,0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-// glClearColor(0.0,0.0,0.0,0.0);
-glClear(GL_COLOR_BUFFER_BIT);
-
-
-// glActiveTexture(GL_TEXTURE0);
-// glBindTexture(GL_TEXTURE_2D, textureB);
-// glUniform1i(0, 0);
-
-// glRecti(-1,-1,1,1);
-
-// glUseProgram(0);
-// glBindFramebuffer(GL_FRAMEBUFFER, 0);
-// glBindFramebuffer(GL_FRAMEBUFFER, fboA);
-
-glFinish();
-for (int x = 0; x < 1; x++) {
-  render(p, fboA, textureB, x*2);
-  glFinish();
-  render(p, fboB, textureA, x*2+1);
-  glFinish();
-  // swap(&fboA, &fboB);
-  // swap(&textureA, &textureB);
-}
-
-
-#if 0
-GLfloat* data = malloc(sizeof(GLfloat) * CANVAS_WIDTH * CANVAS_HEIGHT * 3);
-glReadPixels(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, GL_RGB, GL_FLOAT, data);
-
-printf("P3\n");
-printf("%d %d\n", CANVAS_WIDTH, CANVAS_HEIGHT);
-printf("%d\n", 255);
-
-for (int x = 0; x < CANVAS_WIDTH; x++) {
-
-for (int y = 0; y < CANVAS_HEIGHT; y++) {
- 
-for (int z = 0; z < 3; z++) {
-  
-  int val = (int)(data[x * CANVAS_HEIGHT * 3 + y * 3 + z]) % 255;
-  if (val < 0) val = 0;
-  printf("%d ", val);
-} 
-// printf("\n");
-}  
-printf("\n");
-}
-
-// exit(0);
-#endif
-
-// glBindFramebuffer(GL_FRAMEBUFFER, 0);
-// // glViewport(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-// glActiveTexture(GL_TEXTURE0);
-// glBindTexture(GL_TEXTURE_2D, textureB);
-// glUniform1i(0, 0);
-// glUniform1i(1, 0);
-
-
-render(p, 0, textureB, 6969);
-glFinish();
-
-// glRecti(-1,-1,1,1);
-glXSwapBuffers(dpy, win);
-
-while(1) {
-  XEvent xev;
-        XNextEvent(dpy, &xev);
-
-        if(xev.type == KeyPress) {
-          asm(".intel_syntax noprefix");
-          asm("mov rax, 60");
-      		asm("syscall");
-          asm(".att_syntax prefix");
-        }
-    } /* this closes while(1) { */
-} /* this is the } which closes int main(int argc, char *argv[]) { */
-
