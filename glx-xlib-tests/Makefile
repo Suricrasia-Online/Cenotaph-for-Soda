@@ -46,7 +46,7 @@ main : main.c shader.h Makefile
 
 main_packed : main ../packer/header Makefile
 	gzip --no-name -9 -c main | wc -c
-	zopfli --gzip --i1000 -c main > main.gz
+	zopfli --gzip --i100000 -c main > main.gz
 	wc -c main.gz
 	cat ../packer/header main.gz > main_packed
 	chmod +x main_packed
