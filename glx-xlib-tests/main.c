@@ -137,14 +137,14 @@ void _start() {
       .origin_y = 220,
     },
     { 
-      .text = "the Soda That I Consumed",
+      .text = "the Soda that I Consumed",
       .font = "URW Chancery L",
       .matrix = {.xx = 70, .xy = 0, .yy = -70, .yx = 0, .x0 = 0, .y0 = 0},
       .origin_x = 1150,
       .origin_y = 160,
     },
     { 
-      .text = "in the Making of This Demo",
+      .text = "in the Making of this Demo",
       .font = "URW Chancery L",
       .matrix = {.xx = 70, .xy = 0, .yy = -70, .yx = 0, .x0 = 0, .y0 = 0},
       .origin_x = 1100,

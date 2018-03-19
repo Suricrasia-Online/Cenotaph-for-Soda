@@ -236,7 +236,7 @@ void recursivelyRender(inout Ray ray) {
         ray.m_color += rayQueue[i].m_color * rayQueue[i].m_attenuation;
     }
     if (raynum == 1) {
-        ray.m_color = vec3(8.0);
+        ray.m_color = vec3(2.0);
     }
 }
 
@@ -259,6 +259,8 @@ void main() {
 
     Ray ray = newRay(cameraOrigin, rayDirection, vec3(1.0), 0.0);
     recursivelyRender(ray);
+
+    ray.m_color *= 1.0 - pow(distance(uv, vec2(0.0))*0.85, 3.0);
 
     fragColor = vec4(pow(log(ray.m_color+1)*0.9, vec3(1.2)), 1.0);
 }
