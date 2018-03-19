@@ -1,4 +1,5 @@
 #version 450
+uniform float time;
 out vec4 fragColor;
 
 struct Ray
@@ -248,7 +249,8 @@ void recursivelyRender(inout Ray ray) {
 
 void main() {
     // Normalized pixel coordinates (from -1 to 1)
-    vec2 uv = (gl_FragCoord.xy - vec2(960.0, 540.0))/vec2(960.0, 960.0);
+    vec2 offset = vec2(mod(time, 3.0), floor(time/3.0))/3.0;
+    vec2 uv = (gl_FragCoord.xy + offset - vec2(960.0, 540.0))/vec2(960.0, 960.0);
 
     // Camera parameters
     vec3 cameraOrigin = vec3(5.0);
@@ -260,5 +262,5 @@ void main() {
 
     ray.m_color *= 1.0 - pow(distance(uv, vec2(0.0))*0.85, 3.0);
 
-    fragColor = vec4(pow(log(ray.m_color+1)*0.9, vec3(1.2)), 1.0);
+    fragColor = vec4(pow(log(ray.m_color+1)*0.9, vec3(1.2))/9.0, 1.0);
 }

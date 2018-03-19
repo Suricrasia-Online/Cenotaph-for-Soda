@@ -243,9 +243,12 @@ void _start() {
   // glBlendEquationSeparate( GL_FUNC_SUBTRACT, GL_FUNC_ADD);
   glBlendFuncSeparate( GL_ONE, GL_ONE, GL_ONE, GL_ONE);
 
-  // glFinish();
-  glRecti(-1,-1,1,1);
-  // glFinish();
+  glFinish();
+  for (int x = 0; x < 9; x++) {
+    glUniform1f(0, x);
+    glRecti(-1,-1,1,1);
+    glFinish();
+  }
 
   //blit our framebuffer to the screen
   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
