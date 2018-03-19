@@ -259,7 +259,9 @@ void _start() {
     //wait for escape key, then exit without glib :3
     if(xev.type == KeyPress && xev.xkey.keycode == 0x09) {
       asm volatile(".intel_syntax noprefix");
-      asm volatile("mov rax, 60");
+      asm volatile("push 60");
+      asm volatile("pop rax");
+      asm volatile("xor rdi, rdi");
       asm volatile("syscall");
       asm volatile(".att_syntax prefix");
     }
