@@ -258,13 +258,14 @@ void _start() {
 
     //wait for escape key, then exit without glib :3
     if(xev.type == KeyPress && xev.xkey.keycode == 0x09) {
+      //blackle mori no likey AT&T
       asm volatile(".intel_syntax noprefix");
       asm volatile("push 60");
       asm volatile("pop rax");
       asm volatile("xor rdi, rdi");
       asm volatile("syscall");
       asm volatile(".att_syntax prefix");
-       __builtin_unreachable();
+      __builtin_unreachable();
     }
   }
 }
