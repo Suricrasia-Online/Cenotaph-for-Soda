@@ -160,7 +160,7 @@ void _start() {
     }
   };
 
-  cairoCtx->backend->set_source_rgba(cairoCtx, 1.0, 1.0, 1.0, 1.0);
+  cairoCtx->backend->set_source_rgba(cairoCtx, 0.5, 0.5, 0.5, 1.0);
   for (int i = 0; i < 8; i++) {
     // printf("%f, %f, %s\n", texts[i].origin_x, texts[i].origin_y, texts[i].text);
     cairo_select_font_face(cairoCtx, texts[i].font, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);

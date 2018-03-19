@@ -262,5 +262,5 @@ void main() {
 
     ray.m_color *= 1.0 - pow(distance(uv, vec2(0.0))*0.85, 3.0);
 
-    fragColor = vec4(pow(log(ray.m_color+1)*0.14, vec3(1.2)), 1.0);
+    fragColor = vec4(pow(log(ray.m_color+1)*0.16, vec3(1.3)), 1.0);
 }
