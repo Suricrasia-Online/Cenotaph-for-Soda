@@ -198,7 +198,7 @@ glClear(GL_COLOR_BUFFER_BIT);
 // glBindFramebuffer(GL_FRAMEBUFFER, fboA);
 
 glFinish();
-for (int x = 0; x < 0; x++) {
+for (int x = 0; x < 1; x++) {
   render(p, fboA, textureB, x*2);
   glFinish();
   render(p, fboB, textureA, x*2+1);

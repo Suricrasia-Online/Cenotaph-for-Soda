@@ -45,9 +45,9 @@ struct Mat
 };
 
 Mat mats[3] = Mat[3](
-    Mat(vec3(0.36, 0.25, 0.01), vec3(0.25), 5.0, vec3(0.01), vec3(0.01)), //label
-    Mat(vec3(0.16, 0.25, 0.25), vec3(0.25), 25.0, vec3(0.16), vec3(0.16, 0.25, 0.25)), //bottle
-    Mat(vec3(0.81, 0.81, 0.81), vec3(0.25), 11.0, vec3(0.01), vec3(0.00)) //cap
+    Mat(vec3(0.6, 0.5, 0.1), vec3(0.5), 5.0, vec3(0.1), vec3(0.1)), //label
+    Mat(vec3(0.4, 0.5, 0.5), vec3(0.5), 25.0, vec3(0.4), vec3(0.4, 0.5, 0.5)), //bottle
+    Mat(vec3(0.9, 0.9, 0.9), vec3(0.5), 10.0, vec3(0.1), vec3(0.01)) //cap
 );
 
 vec2 params[3] = vec2[3](
@@ -245,55 +245,6 @@ vec2 scene(vec3 point) {
     return s;//matUnion(vec2(unitSquareFrame(point), 2.0), s);
 }
 
-
-// vec2 bottleForGrid(vec3 point, vec3 q) {
-//     uint state = 0u;
-//     feed(state, q.x);
-//     feed(state, q.y);
-//     feed(state, q.z);
-    
-//     vec3 p = point - q*4.0 - 3.0 + vec3(getFloat(state),getFloat(state),getFloat(state))*2.0;
-//     for (int i = 0; i < 3; i++) {
-//         vec3 rand = normalize(vec3(getFloat(state),getFloat(state),getFloat(state))-vec3(0.5));
-//         p = reflect(p, rand);
-//     }
-        
-//     return bottle(p);
-//     //todo pick good maximum value
-//     //probably ok since that's the maximum distance from one end of a cube to another...?
-//     return vec2(1.0, 0.0);
-// }
-
-// vec2 scene(vec3 point) {
-    
-//     vec3 q = floor(point/4.0);
-//     vec3 p = point - q*4.0 - 2.0;
-//     vec2 res = bottleForGrid(point, q);
-//     if (res.x < 1.0) {
-//         return res;
-//     }
-    
-//     int iquad = p.x < 0.0 ? -1 : 1;
-//     int jquad = p.y < 0.0 ? -1 : 1;
-//     int kquad = p.z < 0.0 ? -1 : 1;
-    
-//     vec4 quads = vec4(iquad, jquad, kquad, 0.0);
-    
-    
-//     res = matUnion(res, bottleForGrid(point, q + quads.xww));
-//     res = matUnion(res, bottleForGrid(point, q + quads.wyw));
-//     res = matUnion(res, bottleForGrid(point, q + quads.wwz));
-    
-//     res = matUnion(res, bottleForGrid(point, q + quads.xyw));
-//     res = matUnion(res, bottleForGrid(point, q + quads.wxy));
-//     res = matUnion(res, bottleForGrid(point, q + quads.xwz));
-    
-//     res = matUnion(res, bottleForGrid(point, q + quads.xyz));
-
-//     return res;
-// }
-
-
 vec3 sceneGrad(vec3 point) {
     float t = scene(point).x;
   float x = (t - scene(point + vec3(0.001,0.0,0.0)).x);
@@ -315,7 +266,7 @@ void castRay(inout Ray ray) {
     // Cast ray from origin into scene
     for (int i = 0; i < 100; i++) {
         float dist = distance(ray.m_point, ray.m_origin) + ray.m_cumdist;
-        if (dist > 40.0) {
+        if (dist > 20.0) {
             break;
         }
 
@@ -335,11 +286,10 @@ void castRay(inout Ray ray) {
 
 void phongShadeRay(inout Ray ray) {
     vec3 lightdirs[3] = vec3[3](vec3(-1.0, -1.0, 1.0), vec3(1.0, -1.0, -1.0), vec3(-1.0, 1.0, -1.0));
-    vec3 lightcols[3] = vec3[3](vec3(4.00, 4.00, 1.00), vec3(0.25, 1.00, 1.00), vec3(1.00, 0.25, 1.00));
+    vec3 lightcols[3] = vec3[3](vec3(2.0, 2.0, 1.0), vec3(0.5, 1.0, 1.0), vec3(1.0, 0.5, 1.0));
     // vec3 lightDirection = normalize(vec3(-1.0,-1.0,0.0));
     for (int i = 0; i < 3; i++) {
         vec3 lightDirection = normalize(lightdirs[i]);
-
         if (ray.m_intersected) {
             Mat mat = mats[ray.m_mat];
 
@@ -350,9 +300,9 @@ void phongShadeRay(inout Ray ray) {
             float specular = pow(max(dot(ray.m_direction, reflected), 0.0), mat.m_spec_exp);
       
             
-            ray.m_color += lightcols[i]*(mat.m_diffuse * diffuse + mat.m_specular * specular);
+            ray.m_color += (mat.m_diffuse * (diffuse + 0.1) + mat.m_specular * specular)*lightcols[i];
         } else {
-            ray.m_color += lightcols[i]*vec3(pow(max(dot(lightDirection, ray.m_direction), 0.0), 25.0));
+            ray.m_color += vec3(pow(max(dot(lightDirection, ray.m_direction), 0.0), 25.0))*lightcols[i];
         }
     }
 }
@@ -409,46 +359,36 @@ void main() {
     uint state = 0u;
     feed(state, uv.x);
     feed(state, uv.y);
-    // feed(state, time);
+    feed(state, time);
 
-    for (int i = 0; i < 4; i++) {
-        // Camera parameters
-        vec3 cameraOrigin = vec3(0.0, 0.0,-2.0);
-        vec3 focusPoint = vec3(-5.0, -9.0, 0.5);
-        vec3 cameraDirection = normalize(focusPoint-cameraOrigin);
-        focusPoint -= cameraDirection*0.1;
-        
-        // Generate plate axes with Z-up. will break if pointed straight up
-        // may be converted to constants in the final version...
-        vec3 up = vec3(0.0,0.0,-1.0);
-        vec3 plateXAxis = normalize(cross(cameraDirection, up));
-        vec3 plateYAxis = normalize(cross(cameraDirection, plateXAxis));
+    // Camera parameters
+    vec3 cameraOrigin = vec3(4.0, 6.0, -2.0)*0.9;
+    vec3 cameraDirection = normalize(vec3(0.0)-cameraOrigin);
+    
+    // Generate plate axes with Z-up. will break if pointed straight up
+    // may be converted to constants in the final version...
+    vec3 up = vec3(0.0,0.0,-1.0);
+    vec3 plateXAxis = normalize(cross(cameraDirection, up));
+    vec3 plateYAxis = normalize(cross(cameraDirection, plateXAxis));
 
-        //DOF with focal point at origin
-        vec2 blur = (vec2(getFloat(state)+getFloat(state), getFloat(state)+getFloat(state)) - vec2(1.0))*0.1 * vec2(1.0, 1080.0/1920.0);
-        cameraOrigin += plateXAxis*blur.x + plateYAxis*blur.y;
-        cameraDirection = normalize(focusPoint-cameraOrigin);
-        plateXAxis = normalize(cross(cameraDirection, up));
-        plateYAxis = normalize(cross(cameraDirection, plateXAxis));
-        
-        float fov = radians(50.0);
-        vec2 plateCoords = (uv * 2.0 - 1.0) * vec2(1.0, 1080.0/1920.0) + vec2(getFloat(state), getFloat(state)) * 2.0/1080.0;
-        vec3 platePoint = (plateXAxis * plateCoords.x + plateYAxis * -plateCoords.y) * tan(fov /2.0);
+    //DOF with focal point at origin
+    vec2 blur = (vec2(getFloat(state)+getFloat(state), getFloat(state)+getFloat(state)) - vec2(1.0))*0.1 * vec2(1.0, 1080.0/1920.0);
+    cameraOrigin += plateXAxis*blur.x + plateYAxis*blur.y;
+    cameraDirection = normalize(vec3(0.0)-cameraOrigin);
+    plateXAxis = normalize(cross(cameraDirection, up));
+    plateYAxis = normalize(cross(cameraDirection, plateXAxis));
+    
+    float fov = radians(50.0);
+    vec2 plateCoords = (uv * 2.0 - 1.0) * vec2(1.0, 1080.0/1920.0) + vec2(getFloat(state), getFloat(state)) * 2.0/1080.0;
+    vec3 platePoint = (plateXAxis * plateCoords.x + plateYAxis * -plateCoords.y) * tan(fov /2.0);
 
-        vec3 rayDirection = normalize(platePoint + cameraDirection);
+    vec3 rayDirection = normalize(platePoint + cameraDirection);
 
-        Ray ray = newRay(cameraOrigin, rayDirection, 0.0);
-        castRay(ray);
-        recursiveShadeRay(ray);
-        
-        fragColor += vec4(ray.m_color, 1.0);
-        
-    }
+    Ray ray = newRay(cameraOrigin, rayDirection, 0.0);
+    castRay(ray);
+    recursiveShadeRay(ray);
+    
+    fragColor = vec4(ray.m_color, 1.0)*(1./3.);
 
-
-    fragColor *= 1./4.;
-    fragColor = sqrt(fragColor);
-
-
-    // fragColor += texture2D(canvas, uv);
+    fragColor += texture2D(canvas, uv);
 }
