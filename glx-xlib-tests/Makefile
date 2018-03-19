@@ -25,10 +25,23 @@ main : main.c shader.h Makefile
 	gcc -o main main.c -lX11 -lGL -lcairo -lXrandr -O1 -fno-tree-ch -std=gnu11 -nostartfiles -nostdlib
 	strip main
 	strip -R .note -R .comment -R .eh_frame -R .eh_frame_hdr -R .note.gnu.build-id main
+	#remove section header
 	truncate --size=-1152 main
+	#clear out useless bits
 	sed -i 's/_edata/\x00\x00\x00\x00\x00\x00/g' main;
 	sed -i 's/__bss_start/\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00/g' main;
 	sed -i 's/_end/\x00\x00\x00\x00/g' main;
+	#clear out parts referring to section header
+	#e_shoff
+	dd if=/dev/zero of=main bs=1 seek=40 count=8 conv=notrunc
+	#e_shentsize
+	dd if=/dev/zero of=main bs=1 seek=58 count=2 conv=notrunc
+	#e_shnum
+	dd if=/dev/zero of=main bs=1 seek=60 count=2 conv=notrunc
+	#e_shstrndx
+	dd if=/dev/zero of=main bs=1 seek=62 count=2 conv=notrunc
+	#put in my name do not steal
+	printf 'blackle' | dd of=main bs=1 seek=8 count=7 conv=notrunc
 	wc -c main
 
 main_packed : main ../packer/header Makefile
