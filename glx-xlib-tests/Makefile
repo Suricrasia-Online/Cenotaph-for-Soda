@@ -25,7 +25,7 @@ main : main.c shader.h Makefile
 	gcc -o main main.c -lX11 -lGL -lcairo -lXrandr -O1 -fno-tree-ch -std=gnu11 -nostartfiles -nostdlib
 	strip main
 	strip -R .note -R .comment -R .eh_frame -R .eh_frame_hdr -R .note.gnu.build-id main
-	truncate --size=-1151 main
+	truncate --size=-1152 main
 	sed -i 's/_edata/\x00\x00\x00\x00\x00\x00/g' main;
 	sed -i 's/__bss_start/\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00/g' main;
 	sed -i 's/_end/\x00\x00\x00\x00/g' main;
