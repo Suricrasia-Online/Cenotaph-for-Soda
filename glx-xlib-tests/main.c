@@ -5,6 +5,7 @@
 #include<stdint.h>
 #include<X11/X.h>
 #include<X11/Xlib.h>
+#include<X11/extensions/Xrandr.h>
 #include<GL/gl.h>
 #include<GL/glx.h>
 #include<GL/glu.h>
@@ -34,6 +35,17 @@ void _start() {
   Display* dpy = XOpenDisplay(NULL);
 
   Window root = DefaultRootWindow(dpy);
+
+  int num_sizes;
+  XRRScreenSize* sizes = XRRSizes(dpy, 0, &num_sizes);
+  for (int i = 0; i < num_sizes; i++) {
+    if (sizes[i].width == 1920 && sizes[i].height == 1080) {
+      XRRScreenConfiguration* conf = XRRGetScreenInfo(dpy, root);
+      XRRSetScreenConfig(dpy, conf, root, i, RR_Rotate_0, CurrentTime);
+      break;
+    }
+  }
+
   GLint att[] = { GLX_RGBA, None };
   XVisualInfo* vi = glXChooseVisual(dpy, 0, att);
 

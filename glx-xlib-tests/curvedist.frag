@@ -202,17 +202,17 @@ Ray transmissionForRay(Ray ray) {
     Mat mat = mats[ray.m_mat];
     float sgn = sign(scene(ray.m_origin).x);
     vec3 normal = -sceneGrad(ray.m_point);
-    float frensel = sqrt(abs(dot(ray.m_direction, normal)));
+    // float frensel = sqrt(abs(dot(ray.m_direction, normal)));
     vec3 atten = ray.m_attenuation * mat.m_transparency;// * frensel;
 
     return newRay(ray.m_point - normal*0.0001*4.0*sgn, ray.m_direction, atten, ray.m_cumdist);
 }
 
-#define QUEUELEN 18
-Ray rayQueue[QUEUELEN];
+// #define 18 18
+Ray rayQueue[18];
 int raynum;
 void addToQueue(Ray ray) {
-    if (raynum >= QUEUELEN) return;
+    if (raynum >= 18) return;
     rayQueue[raynum] = ray;
     raynum++;
 }
@@ -222,7 +222,7 @@ void recursivelyRender(inout Ray ray) {
     rayQueue[0] = ray;
     raynum = 1;
 
-    for (int i = 0; i < QUEUELEN; i++) {
+    for (int i = 0; i < 18; i++) {
         if (i >= raynum) break;
 
         castRay(rayQueue[i]);
@@ -255,9 +255,7 @@ void main() {
     vec3 cameraDirection = vec3(-1.414,-1.414,-1.414);
     vec3 platePoint = (vec3(-0.71,0.71,0.0) * uv.x + vec3(0.408, 0.408, -0.816) * -uv.y);
 
-    vec3 rayDirection = normalize(platePoint + cameraDirection);
-
-    Ray ray = newRay(cameraOrigin, rayDirection, vec3(1.0), 0.0);
+    Ray ray = newRay(cameraOrigin, normalize(platePoint + cameraDirection), vec3(1.0), 0.0);
     recursivelyRender(ray);
 
     ray.m_color *= 1.0 - pow(distance(uv, vec2(0.0))*0.85, 3.0);
