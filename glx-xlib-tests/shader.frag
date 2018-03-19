@@ -1,188 +1,264 @@
 #version 450
-uniform sampler2D canvas;
-uniform float time;
 out vec4 fragColor;
 
-//http://www.reedbeta.com/blog/quick-and-easy-gpu-random-numbers-in-d3d11/
-void stepState(inout uint state)
-{
-	state = (state ^ 61u) ^ (state >> 16u);
-	state *= 9u;
-	state = state ^ (state >> 4u);
-	state *= 0x27d4eb2du;
-	state = state ^ (state >> 15u);
-}
-
-void feed(inout uint state, float value)
-{
-	stepState(state);
-	state ^= floatBitsToInt(value);
-}
-
-float getFloat(inout uint state) {
-	stepState(state);
-	return uintBitsToFloat( (state & 0x007FFFFFu) | 0x3F800000u ) - 1.0;
-}
-
-float EPSI = 0.0001;
-vec3 ORIGIN = vec3(0.0,0.0,0.0);
-vec3 VECTOR_X = vec3(1.0,0.0,0.0);
-vec3 VECTOR_Y = vec3(0.0,1.0,0.0);
-vec3 VECTOR_Z = vec3(0.0,0.0,1.0);
-
-vec3 circleTextureComponent(vec2 point, vec2 grid) {
-	uint state = 0u;
-	feed(state, grid.x);
-	feed(state, grid.y);
-
-	float width = getFloat(state);
-	float x_offset = getFloat(state);
-	float y_offset = getFloat(state);
-	vec2 midpoint = grid + vec2(x_offset, y_offset);
-	
-	float feather = clamp((width*0.5 - distance(point, midpoint))*20.0, 0.0, 1.0);
-	
-	float rotation = getFloat(state);
-	float projection = dot(point-midpoint,vec2(cos(rotation*60.),sin(rotation*60.)));
-	float normalized = projection*0.5+0.5;
-	normalized /= getFloat(state)+1.0;
-
-	float colorrand = getFloat(state);
-	float red = abs(cos((normalized+colorrand)*3.14));
-	float green = abs(cos((normalized+colorrand-0.9/3.)*3.14));
-	float blue = abs(cos((normalized+colorrand-2.2/3.)*3.14));
-
-	return vec3(red, green, blue) * feather;
-}
-
-vec3 circleTexture(vec2 point) {
-	vec2 grid = floor(point);
-	vec3 color = vec3(0.0,0.0,0.0);
-	for (int i = -1; i <= 1; i++) {
-		for (int j = -1; j <= 1; j++) {
-			color += circleTextureComponent(point, grid + vec2(i,j));
-		}
-	}
-	// color += circleTextureComponent(point, grid);
-	return color;
-}
-
-//note to self: the shader minifier doesn't minify struct members
 struct Ray
 {
   vec3 m_origin;
   vec3 m_direction;
   vec3 m_point;
   bool m_intersected;
+  int m_mat;
   vec3 m_color;
+  vec3 m_attenuation;
+  float m_cumdist;
 };
+    
+struct Mat
+{
+    vec3 m_diffuse;
+    vec3 m_reflectance;
+    vec3 m_transparency;
+};
+
+Mat mats[2] = Mat[2](
+    Mat(vec3(0.8, 0.2, 0.1), vec3(0.2), vec3(0.1)), //label / cap
+    Mat(vec3(1.0, 1.0, 1.0), vec3(0.8), vec3(0.7, 0.7, 0.7)) //bottle / grave
+);
+
+//choose good positions...
+vec3 lightdirs[3] = vec3[3](
+    vec3(0.0, 0.5, -1.0),
+    vec3(1.0, -0.5, -1.0),
+    vec3(-1.0, -0.25, -1.0)
+);
+
+vec3 lightcols[3] = vec3[3](
+    vec3(1.0, 1.0, 0.1),
+    vec3(1.0, 0.1, 1.0),
+    vec3(0.1, 1.0, 1.0)
+);
+
 
 float smin( float a, float b, float k )
 {
-	float h = clamp( 0.5+0.5*(b-a)/k, 0.0, 1.0 );
-	return mix( b, a, h ) - k*h*(1.0-h);
+    // if (k == 0.0) return min(a,b);
+    float h = clamp( 0.5+0.5*(b-a)/k, 0.0, 1.0 );
+    return mix( b, a, h ) - k*h*(1.0-h);
 }
 
-float ball(vec3 point, vec3 origin, float radius) {
-	return distance(point, origin) - radius;
+float distanceToBottleCurve(vec2 point) {
+    float x = point.x*2.5;
+    return point.y-0.1*sin(x + 0.2) + 0.05*sin(2.0*x) + 0.05*sin(3.0*x);
 }
 
-float scene(vec3 point) {
-	vec3 rep = point;
-	rep.z = mod(rep.z, 3.0) - 1.9;
-	rep.y = mod(rep.y, 3.5) - 1.6;
-	return min(smin(smin(
-	ball(rep, vec3(0.0,0.8,0.3), 0.7),
-	ball(rep, vec3(0.0,-0.8,0.3), 0.7), 0.1),
-	ball(rep, vec3(0.0, 0.0, -0.7), 1.0), 0.1),
-	point.x + 1.0);
+float tombstone(vec3 point, float w, float l, float h, float s, float s2) {
+    vec3 ptabs = abs(point);
+    return -smin(smin(w - ptabs.x, h - ptabs.z, s2), l - ptabs.y, s);
+}
+
+float cylinder(vec3 point, float r, float h, float s) {
+    return -smin(-(distance(point.xy, vec2(0.0)) - r), -(abs(point.z) - h), s);
+}
+
+vec2 matUnion(vec2 a, vec2 b) {
+    return (a.x < b.x) ? a : b;
+}
+vec2 smatUnion(vec2 a, vec2 b, float k) {
+    return vec2(smin(a.x, b.x, k), matUnion(a, b).y);
+}
+
+vec2 bottle(vec3 point) {
+    //blackle were you raised in a barn? fix this shit!
+    float dist = distance(point.xy, vec2(0.0));
+    float top = point.z;
+
+    float tops = abs(top-0.05) - 0.95;
+    float curve = distanceToBottleCurve(vec2(top, dist - 0.3));
+    curve += min(sin(atan(point.y/point.x)*16.0), 0.0)*0.001;
+    
+    float shell = -smin(-tops, -curve, 0.2);
+    
+    for (int i = 0; i < 3; i++) {
+        vec2 angle = vec2(cos(3.14/3.0*float(i)), sin(3.14/3.0*float(i)));
+        //note, make this a call to cylinder
+        float cut = distance(vec2(dot(point.xy, angle), point.z), vec2(dot(vec2(0.0), angle), 0.95)) - 0.06;
+        shell = -smin(-shell, cut, 0.1);
+    }
+    
+    float lid = cylinder(point+vec3(0.0,0.0,0.89), 0.14, 0.10, 0.02);
+    lid += abs(sin(atan(point.y/point.x)*32.0))*0.0005 * (1.0 - clamp(abs(dist - 0.14)*32.0, 0.0, 1.0));
+    lid = min(lid, cylinder(point+vec3(0.0,0.0,0.77), 0.14, 0.02, 0.02));
+    
+    float lip = cylinder(point+vec3(0.0,0.0,0.73), 0.15, 0.01, 0.01);
+    shell = min(lip, shell);
+    
+    float label = cylinder(point*3.1 + vec3(0.0,0.0,-0.75), 1.0, 1.0, 0.1) / 2.9;
+
+    return smatUnion(smatUnion(
+        vec2(shell, 1.0),
+        vec2(label, 0.0), 0.02),
+        vec2(lid, 0.0), 0.02);
+    // return uni;
+}
+
+vec2 scene(vec3 point) {
+
+    // return bottle(p4b);
+    vec3 offset = point.x > 1.0
+        ? vec3(2.0, 0.0, 0.0)
+        : (point.x < -1.0
+            ? vec3(-2.0, 0.0, 0.0)
+            : vec3(0.0));
+
+
+    vec3 p = point - offset;
+    float wobble = cos(point.z)*cos(point.y*5.0)*cos(point.x*5.0)*0.01;
+    float grave = -smin(-p.z, tombstone(p, 0.6 + p.z*0.2, 1.2 + p.z*0.2, 0.75, 0.1, 0.1), 0.1);
+    float stone = tombstone(p + vec3(0.0, 1.5, 0.0), 0.5 - p.z*0.01, 0.12 - p.z*0.01, 1.2, 0.1, 0.5);
+    vec3 p4b = (p - vec3(0.0, 0.0, -0.25)).zxy;
+
+    // return bottle(p4b);
+    return matUnion(vec2(wobble + smin(stone, grave, 0.1), 1.0), bottle(p4b));
 }
 
 vec3 sceneGrad(vec3 point) {
-	float x = scene(point) - scene(point + VECTOR_X*EPSI);
-	float y = scene(point) - scene(point + VECTOR_Y*EPSI);
-	float z = scene(point) - scene(point + VECTOR_Z*EPSI);
-	return normalize(vec3(x,y,z));
+    float t = scene(point).x;
+    float x = (t - scene(point + vec3(0.001,0.0,0.0)).x);
+    float y = (t - scene(point + vec3(0.0,0.001,0.0)).x);
+    float z = (t - scene(point + vec3(0.0,0.0,0.001)).x);
+    return normalize(vec3(x,y,z));
 }
 
-Ray newRay(vec3 origin, vec3 direction) {
-	// Create a default ray
- 	return Ray(origin, direction, origin, false, ORIGIN);
+Ray newRay(vec3 origin, vec3 direction, vec3 attenuation, float cumdist) {
+    // Create a default ray
+    return Ray(origin, direction, origin, false, -1, vec3(0.0), attenuation, cumdist);
 }
 
 void castRay(inout Ray ray) {
-	// Cast ray from origin into scene
+    // Cast ray from origin into scene
+    float sgn = sign(scene(ray.m_origin).x);
+    for (int i = 0; i < 100; i++) {
+        float dist = distance(ray.m_point, ray.m_origin) + ray.m_cumdist;
+        if (dist > 20.0) {
+            break;
+        }
 
-	for (int i = 0; i < 50; i++) {
-		if (distance(ray.m_point, ray.m_origin) > 50.0) {
-			break;
-		}
-
-		float dist = scene(ray.m_point);
-
-		if (abs(dist) < EPSI) {
-			ray.m_intersected = true;
-			break;
-		}
-
-		ray.m_point += dist * ray.m_direction;
-	}
+        vec2 smpl = scene(ray.m_point);
+        float res = smpl.x;
+        
+        if (abs(res) < 0.0001) {
+            ray.m_intersected = true;
+            ray.m_mat = int(smpl.y);
+            ray.m_cumdist = dist;
+            break;
+        }
+        
+        ray.m_point += res * ray.m_direction * sgn;
+    }
 }
 
-vec3 shadeRay(inout Ray ray) {
-	castRay(ray);
-	if (ray.m_intersected) {
-		vec3 normal = -sceneGrad(ray.m_point);
-		Ray shadow = newRay(ray.m_point + normal*EPSI*4.0, VECTOR_X);
-		castRay(shadow);
-		if (!shadow.m_intersected) {
-			float diffuse = max(dot(normal, VECTOR_X),0.0);
-			vec3 reflected = reflect(ray.m_direction, normal);
-			float specular = pow(max(dot(reflected, VECTOR_X), 0.0), 10.0);
-			return vec3(diffuse * 0.5 + specular * 0.5);
-		}
-	}
-	return vec3(0.0);
+void phongShadeRay(inout Ray ray) {
+
+    if (ray.m_intersected) {
+        for (int i = 0; i < 3; i++) {
+            vec3 lightDirection = normalize(lightdirs[i]);
+            Mat mat = mats[ray.m_mat];
+
+            vec3 normal = -sceneGrad(ray.m_point);
+
+            vec3 reflected = reflect(lightDirection, normal);
+            float diffuse = abs(dot(lightDirection, normal));
+            float specular = pow(abs(dot(ray.m_direction, reflected)), 20.0);
+
+            vec3 diffuse_color = mat.m_diffuse;
+            if (ray.m_mat == 0) {
+                if (ray.m_point.x > 1.0) {
+                    diffuse_color = diffuse_color.zyx;
+                } else if (ray.m_point.x < -1.0) {
+                    diffuse_color = diffuse_color.zxy * 0.7;
+                }
+            }
+      
+            //oh god blackle clean this up
+            ray.m_color += (diffuse_color * diffuse * (- mat.m_transparency + 1.0) + specular)*lightcols[i];
+        }
+    } else {
+        ray.m_color += 1.0-ray.m_direction*ray.m_direction;//vec3(pow(abs(dot(lightDirection, ray.m_direction)), 25.0))*lightcols[i];
+    }
 }
+
+Ray reflectionForRay(Ray ray) {
+    Mat mat = mats[ray.m_mat];
+    float sgn = sign(scene(ray.m_origin).x);
+    vec3 normal = -sceneGrad(ray.m_point);
+    float frensel = abs(dot(ray.m_direction, normal));
+    vec3 atten = ray.m_attenuation * mat.m_reflectance * (1.0 - frensel*0.98);
+    vec3 reflected = reflect(ray.m_direction, normal);
+
+    return newRay(ray.m_point + normal*0.0001*4.0*sgn, reflected, atten, ray.m_cumdist);
+}
+
+Ray transmissionForRay(Ray ray) {
+    Mat mat = mats[ray.m_mat];
+    float sgn = sign(scene(ray.m_origin).x);
+    vec3 normal = -sceneGrad(ray.m_point);
+    // float frensel = sqrt(abs(dot(ray.m_direction, normal)));
+    vec3 atten = ray.m_attenuation * mat.m_transparency;// * frensel;
+
+    return newRay(ray.m_point - normal*0.0001*4.0*sgn, ray.m_direction, atten, ray.m_cumdist);
+}
+
+// #define 18 18
+Ray rayQueue[18];
+int raynum;
+void addToQueue(Ray ray) {
+    if (raynum >= 18) return;
+    rayQueue[raynum] = ray;
+    raynum++;
+}
+
+void recursivelyRender(inout Ray ray) {
+    // if (ray.m_intersected) {
+    rayQueue[0] = ray;
+    raynum = 1;
+
+    for (int i = 0; i < 18; i++) {
+        if (i >= raynum) break;
+
+        castRay(rayQueue[i]);
+        phongShadeRay(rayQueue[i]);
+        if (rayQueue[i].m_intersected) {
+            addToQueue(reflectionForRay(rayQueue[i]));
+            addToQueue(transmissionForRay(rayQueue[i]));
+        }
+    }
+    for (int i = 0; i < raynum; i++) {
+        ray.m_color += rayQueue[i].m_color * rayQueue[i].m_attenuation;
+    }
+    if (raynum == 1) {
+        ray.m_color = vec3(2.0);
+    }
+}
+
+// vec3 grade(vec3 val) {
+//     // return log(val+1)*0.5;
+//     return pow(log(val+1)*0.9, vec3(1.2));
+//     // return -2.56 * x*x*x + 4.63 * x*x - 1.19 * x + 0.125;
+// }
 
 void main() {
-	// Normalized pixel coordinates (from -1 to 1)
-	vec2 uv = gl_FragCoord.xy/vec2(1920.0, 1080.0);
+    // Normalized pixel coordinates (from -1 to 1)
+    vec2 uv = (gl_FragCoord.xy - vec2(960.0, 540.0))/vec2(960.0, 960.0);
 
-	uint state = 0u;
-	feed(state, uv.x);
-	feed(state, uv.y);
-	feed(state, time);
+    // Camera parameters
+    vec3 cameraOrigin = vec3(5.0, 5.0, 5.0);
+    vec3 cameraDirection = vec3(-1.414,-1.414,-1.414);
+    vec3 platePoint = (vec3(-0.71,0.71,0.0) * uv.x + vec3(0.408, 0.408, -0.816) * -uv.y);
 
-	float randomX = getFloat(state);
-	float randomY = getFloat(state);
+    Ray ray = newRay(cameraOrigin, normalize(platePoint + cameraDirection), vec3(1.0), 0.0);
+    recursivelyRender(ray);
 
-	// Camera parameters
-	vec3 cameraOrigin = vec3(16.0, 0.0, 0.0);
-	vec3 cameraDirection = normalize(vec3(-1.0, 0.0, 0.0));
+    ray.m_color *= 1.0 - pow(distance(uv, vec2(0.0))*0.85, 3.0);
 
-	// Generate plate axes with Z-up. will break if pointed straight up
-	// may be converted to constants in the final version...
-	vec3 up = vec3(0.0, 0.0, 1.0);
-	vec3 plateXAxis = normalize(cross(cameraDirection, up));
-	vec3 plateYAxis = normalize(cross(cameraDirection, plateXAxis));
-
-	float fov = radians(70.0);
-	vec2 plateCoords = (uv * 2.0 - 1.0) * vec2(1.0, 1080.0/1920.0) + vec2(randomX, randomY) * 2.0/1080.0;
-	vec3 platePoint = (plateXAxis * plateCoords.x + plateYAxis * -plateCoords.y) * tan(fov /2.0);
-
-	vec3 rayDirection = normalize(platePoint + cameraDirection);
-
-	Ray ray = newRay(cameraOrigin, rayDirection);
-
-	vec3 color = ORIGIN;
-	color += shadeRay(ray);
-	// if (ray.m_intersected) {
-	// 	// color = circleTexture(ray.m_point.yz *5.);
-	// 	color += clamp(abs(sceneGrad(ray.m_point).x + sceneGrad(ray.m_point).z)/2.0, 0.0, 1.0);
-	// }
-	fragColor = vec4(color,1.0)*0.02;
-	// fragColor = vec4(uv,0.0,1.0);
-
-	fragColor += texture2D(canvas, uv);
+    fragColor = vec4(pow(log(ray.m_color+1)*0.9, vec3(1.2)), 1.0);
 }

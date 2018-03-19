@@ -1,9 +1,8 @@
 
 all : main
 
-shader.frag.min : shader.frag curvedist.frag Makefile
+shader.frag.min : shader.frag Makefile
 	cp shader.frag shader.frag.min
-	cp curvedist.frag shader.frag.min
 	sed -i 's/m_origin/o/g' shader.frag.min
 	sed -i 's/m_direction/d/g' shader.frag.min
 	sed -i 's/m_point/k/g' shader.frag.min
