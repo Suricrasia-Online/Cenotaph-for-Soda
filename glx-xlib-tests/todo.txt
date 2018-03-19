@@ -1,11 +1,12 @@
 todo: 
-[ ] clean up the code
-[ ] set 1920x1080 video mode
-[ ] make the escape key be the only thing that quits. and it must quit at any time (within reason)
-[ ] fake antialias with sdf trickery?
-[ ] have the text be embossed in the plastic
-[ ] choose a good font
-[ ] make a cute label for the bottles. I have more than enough space!
+[x] clean up the code
+[x] set 1920x1080 video mode
+[x] make the escape key be the only thing that quits.
+[!] and it must quit at any time (within reason, nixed for difficulty)
+[!] fake antialias with sdf trickery? (nixed)
+[!] have the text be embossed in the plastic (nixed)
+[x] choose a good font
+[!] make a cute label for the bottles. I have more than enough space! (nixed)
 			- hng revision logo
 			- with the 2018 hexagonal aesthetic~~
 			- maybe make the label bigger?

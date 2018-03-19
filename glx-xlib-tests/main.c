@@ -262,7 +262,7 @@ void _start() {
       asm volatile(".intel_syntax noprefix");
       asm volatile("push 60");
       asm volatile("pop rax");
-      asm volatile("xor rdi, rdi");
+      asm volatile("xor edi, edi");
       asm volatile("syscall");
       asm volatile(".att_syntax prefix");
       __builtin_unreachable();

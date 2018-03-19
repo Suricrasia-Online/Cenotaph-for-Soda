@@ -22,7 +22,7 @@ struct Mat
 
 Mat mats[2] = Mat[2](
     Mat(vec3(0.8, 0.2, 0.1), vec3(0.2), vec3(0.1)), //label / cap
-    Mat(vec3(1.0, 1.0, 1.0), vec3(0.8), vec3(0.7, 0.7, 0.7)) //bottle / grave
+    Mat(vec3(1.0), vec3(0.8), vec3(0.7)) //bottle / grave
 );
 
 //choose good positions...
@@ -251,7 +251,7 @@ void main() {
     vec2 uv = (gl_FragCoord.xy - vec2(960.0, 540.0))/vec2(960.0, 960.0);
 
     // Camera parameters
-    vec3 cameraOrigin = vec3(5.0, 5.0, 5.0);
+    vec3 cameraOrigin = vec3(5.0);
     vec3 cameraDirection = vec3(-1.414,-1.414,-1.414);
     vec3 platePoint = (vec3(-0.71,0.71,0.0) * uv.x + vec3(0.408, 0.408, -0.816) * -uv.y);
 
