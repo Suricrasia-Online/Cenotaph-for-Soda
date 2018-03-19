@@ -84,7 +84,10 @@ void _start() {
 
   //clear to black and use glfinish to make sure it propagates to the screen before we start shader compilation
   glViewport(0,0, CANVAS_WIDTH, CANVAS_HEIGHT);
-  glClearColor(0.0,0.0,0.0,0.0);
+  // typedef void (*voidWithNoParams)();
+  // voidWithNoParams glClearColorArbitrary = (voidWithNoParams)glClearColor;
+  // (*glClearColorArbitrary)();
+  // glClearColor(0.0,0.0,0.0,0.0);
   glClear(GL_COLOR_BUFFER_BIT);
   // glFinish();
 
@@ -92,16 +95,9 @@ void _start() {
   XGrabKeyboard(dpy, win, true, GrabModeAsync, GrabModeAsync, CurrentTime);
 
   //initialize the render with some text
-
-  //make this not shitty?
-  // for (int i = 0; i < 4 * CANVAS_HEIGHT * CANVAS_WIDTH; i++) {
-  //   data[i] = 0x00;
-  // }
-
   cairo_surface_t* cairoSurf = cairo_image_surface_create_for_data(fbdata, CAIRO_FORMAT_ARGB32, CANVAS_WIDTH, CANVAS_HEIGHT, 4 * CANVAS_WIDTH);
   cairo_t* cairoCtx = cairo_create(cairoSurf);
 
-  
   // cairo_set_font_matrix(cairoCtx, &matrix);
   // printf("xx: %f, xy: %f, yy: %f, yx: %f, x0: %f, y0: %f\n", matrix.xx, matrix.xy, matrix.yy, matrix.yx, matrix.x0, matrix.y0);
 
@@ -248,12 +244,8 @@ void _start() {
   glBlendFuncSeparate( GL_ONE, GL_ONE, GL_ONE, GL_ONE);
 
   // glFinish();
-
-  //begin collecting samples, using the shader as the renderer
-  // for (int x = 0; x < 1; x++) {
-    glRecti(-1,-1,1,1);
-    // glFinish();
-  // }
+  glRecti(-1,-1,1,1);
+  // glFinish();
 
   //blit our framebuffer to the screen
   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
