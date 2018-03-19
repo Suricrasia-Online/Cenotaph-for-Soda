@@ -16,29 +16,26 @@ struct Ray
 struct Mat
 {
     vec3 m_diffuse;
-    vec3 m_specular;
-    float m_spec_exp;
     vec3 m_reflectance;
     vec3 m_transparency;
 };
 
-Mat mats[3] = Mat[3](
-    Mat(vec3(0.6, 0.1, 0.1), vec3(0.5), 5.0, vec3(0.1), vec3(0.1)), //label
-    Mat(vec3(0.4, 0.5, 0.5), vec3(0.5), 25.0, vec3(0.4), vec3(0.5, 0.5, 0.5)), //bottle
-    Mat(vec3(0.9, 0.9, 0.9), vec3(0.5), 10.0, vec3(0.1), vec3(0.0)) //cap
+Mat mats[2] = Mat[2](
+    Mat(vec3(0.8, 0.2, 0.1), vec3(0.2), vec3(0.1)), //label / cap
+    Mat(vec3(1.0, 1.0, 1.0), vec3(0.8), vec3(0.7, 0.7, 0.7)) //bottle / grave
 );
 
 //choose good positions...
 vec3 lightdirs[3] = vec3[3](
     vec3(0.0, 0.5, -1.0),
     vec3(1.0, -0.5, -1.0),
-    vec3(-1.0, -0.5, -1.0)
+    vec3(-1.0, -0.25, -1.0)
 );
 
 vec3 lightcols[3] = vec3[3](
-    vec3(2.0, 2.0, 0.0),
-    vec3(2.0, 0.0, 2.0),
-    vec3(0.0, 2.0, 2.0)
+    vec3(1.0, 1.0, 0.1),
+    vec3(1.0, 0.1, 1.0),
+    vec3(0.1, 1.0, 1.0)
 );
 
 
@@ -100,7 +97,7 @@ vec2 bottle(vec3 point) {
     return smatUnion(smatUnion(
         vec2(shell, 1.0),
         vec2(label, 0.0), 0.02),
-        vec2(lid, 2.0), 0.02);
+        vec2(lid, 0.0), 0.02);
     // return uni;
 }
 
@@ -137,23 +134,19 @@ Ray newRay(vec3 origin, vec3 direction, vec3 attenuation, float cumdist) {
     return Ray(origin, direction, origin, false, -1, vec3(0.0), attenuation, cumdist);
 }
 
-float eps4dist(float dist) {
-    return 0.0005*dist;
-}
-
 void castRay(inout Ray ray) {
     // Cast ray from origin into scene
     float sgn = sign(scene(ray.m_origin).x);
     for (int i = 0; i < 100; i++) {
         float dist = distance(ray.m_point, ray.m_origin) + ray.m_cumdist;
-        if (dist > 50.0) {
+        if (dist > 20.0) {
             break;
         }
 
         vec2 smpl = scene(ray.m_point);
         float res = smpl.x;
         
-        if (abs(res) < eps4dist(dist)) {
+        if (abs(res) < 0.0001) {
             ray.m_intersected = true;
             ray.m_mat = int(smpl.y);
             ray.m_cumdist = dist;
@@ -166,22 +159,31 @@ void castRay(inout Ray ray) {
 
 void phongShadeRay(inout Ray ray) {
 
-    for (int i = 0; i < 3; i++) {
-        vec3 lightDirection = normalize(lightdirs[i]);
-        if (ray.m_intersected) {
+    if (ray.m_intersected) {
+        for (int i = 0; i < 3; i++) {
+            vec3 lightDirection = normalize(lightdirs[i]);
             Mat mat = mats[ray.m_mat];
 
             vec3 normal = -sceneGrad(ray.m_point);
 
             vec3 reflected = reflect(lightDirection, normal);
             float diffuse = abs(dot(lightDirection, normal));
-            float specular = pow(abs(dot(ray.m_direction, reflected)), mat.m_spec_exp);
+            float specular = pow(abs(dot(ray.m_direction, reflected)), 20.0);
+
+            vec3 diffuse_color = mat.m_diffuse;
+            if (ray.m_mat == 0) {
+                if (ray.m_point.x > 1.0) {
+                    diffuse_color = diffuse_color.zyx;
+                } else if (ray.m_point.x < -1.0) {
+                    diffuse_color = diffuse_color.zxy * 0.7;
+                }
+            }
       
             //oh god blackle clean this up
-            ray.m_color += (mat.m_diffuse * diffuse + mat.m_specular * specular)*lightcols[i] * (vec3(1.0)-mat.m_transparency);
-        } else {
-            ray.m_color += vec3(pow(abs(dot(lightDirection, ray.m_direction)), 25.0))*lightcols[i];
+            ray.m_color += (diffuse_color * diffuse * (- mat.m_transparency + 1.0) + specular)*lightcols[i];
         }
+    } else {
+        ray.m_color += 1.0-ray.m_direction*ray.m_direction;//vec3(pow(abs(dot(lightDirection, ray.m_direction)), 25.0))*lightcols[i];
     }
 }
 
@@ -193,7 +195,7 @@ Ray reflectionForRay(Ray ray) {
     vec3 atten = ray.m_attenuation * mat.m_reflectance * (1.0 - frensel*0.98);
     vec3 reflected = reflect(ray.m_direction, normal);
 
-    return newRay(ray.m_point + normal*eps4dist(ray.m_cumdist)*4.0*sgn, reflected, atten, ray.m_cumdist);
+    return newRay(ray.m_point + normal*0.0001*4.0*sgn, reflected, atten, ray.m_cumdist);
 }
 
 Ray transmissionForRay(Ray ray) {
@@ -201,12 +203,12 @@ Ray transmissionForRay(Ray ray) {
     float sgn = sign(scene(ray.m_origin).x);
     vec3 normal = -sceneGrad(ray.m_point);
     float frensel = sqrt(abs(dot(ray.m_direction, normal)));
-    vec3 atten = ray.m_attenuation * mat.m_transparency * frensel;
+    vec3 atten = ray.m_attenuation * mat.m_transparency;// * frensel;
 
-    return newRay(ray.m_point - normal*eps4dist(ray.m_cumdist)*4.0*sgn, ray.m_direction, atten, ray.m_cumdist);
+    return newRay(ray.m_point - normal*0.0001*4.0*sgn, ray.m_direction, atten, ray.m_cumdist);
 }
 
-#define QUEUELEN 8
+#define QUEUELEN 18
 Ray rayQueue[QUEUELEN];
 int raynum;
 void addToQueue(Ray ray) {
@@ -226,20 +228,23 @@ void recursivelyRender(inout Ray ray) {
         castRay(rayQueue[i]);
         phongShadeRay(rayQueue[i]);
         if (rayQueue[i].m_intersected) {
-            if(raynum < 7) addToQueue(reflectionForRay(rayQueue[i]));
+            addToQueue(reflectionForRay(rayQueue[i]));
             addToQueue(transmissionForRay(rayQueue[i]));
         }
     }
     for (int i = 0; i < raynum; i++) {
         ray.m_color += rayQueue[i].m_color * rayQueue[i].m_attenuation;
     }
+    if (raynum == 1) {
+        ray.m_color = vec3(8.0);
+    }
 }
 
-vec3 grade(vec3 val) {
-    // return log(val+1)*0.5;
-    vec3 x = clamp(log(val+1), 0.0, 1.0);
-    return -2.56 * x*x*x + 4.63 * x*x - 1.19 * x + 0.125;
-}
+// vec3 grade(vec3 val) {
+//     // return log(val+1)*0.5;
+//     return pow(log(val+1)*0.9, vec3(1.2));
+//     // return -2.56 * x*x*x + 4.63 * x*x - 1.19 * x + 0.125;
+// }
 
 void main() {
     // Normalized pixel coordinates (from -1 to 1)
@@ -255,5 +260,5 @@ void main() {
     Ray ray = newRay(cameraOrigin, rayDirection, vec3(1.0), 0.0);
     recursivelyRender(ray);
 
-    fragColor = vec4(grade(ray.m_color), 1.0);
+    fragColor = vec4(pow(log(ray.m_color+1)*0.9, vec3(1.2)), 1.0);
 }

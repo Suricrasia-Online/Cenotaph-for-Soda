@@ -26,6 +26,7 @@ struct _textloc {
   float origin_y;
 }; 
 
+static unsigned char fbdata[4 * CANVAS_HEIGHT * CANVAS_WIDTH];
 
 __attribute__((force_align_arg_pointer))
 void _start() {
@@ -40,13 +41,13 @@ void _start() {
   Colormap cmap = XCreateColormap(dpy, root, vi->visual, AllocNone);
 
   //hide cursor
-  static char csr_bits[] = {0x00};
+  // static char csr_bits[] = {0x00};
   XColor xcolor;
-  Pixmap csr= XCreateBitmapFromData(dpy,root,csr_bits,1,1);
+  Pixmap csr= XCreatePixmap(dpy,root,1,1,1);
   Cursor cursor= XCreatePixmapCursor(dpy,csr,csr,&xcolor,&xcolor,1,1); 
 
   //this enables things like events, fullscreen, and sets the invisible cursor
-  XSetWindowAttributes    swa;
+  XSetWindowAttributes swa;
   swa.colormap = cmap;
   swa.override_redirect = 1;
   swa.event_mask = ExposureMask | KeyPressMask;
@@ -73,27 +74,26 @@ void _start() {
   glViewport(0,0, CANVAS_WIDTH, CANVAS_HEIGHT);
   glClearColor(0.0,0.0,0.0,0.0);
   glClear(GL_COLOR_BUFFER_BIT);
-  glFinish();
+  // glFinish();
 
   //oh yeah grab the keyboard
   XGrabKeyboard(dpy, win, true, GrabModeAsync, GrabModeAsync, CurrentTime);
 
   //initialize the render with some text
-  unsigned char data[4 * CANVAS_HEIGHT * CANVAS_WIDTH];
 
   //make this not shitty?
-  for (int i = 0; i < 4 * CANVAS_HEIGHT * CANVAS_WIDTH; i++) {
-    data[i] = 0xFF;
-  }
+  // for (int i = 0; i < 4 * CANVAS_HEIGHT * CANVAS_WIDTH; i++) {
+  //   data[i] = 0x00;
+  // }
 
-  cairo_surface_t* cairoSurf = cairo_image_surface_create_for_data(data, CAIRO_FORMAT_ARGB32, CANVAS_WIDTH, CANVAS_HEIGHT, 4 * CANVAS_WIDTH);
+  cairo_surface_t* cairoSurf = cairo_image_surface_create_for_data(fbdata, CAIRO_FORMAT_ARGB32, CANVAS_WIDTH, CANVAS_HEIGHT, 4 * CANVAS_WIDTH);
   cairo_t* cairoCtx = cairo_create(cairoSurf);
 
   
   // cairo_set_font_matrix(cairoCtx, &matrix);
   // printf("xx: %f, xy: %f, yy: %f, yx: %f, x0: %f, y0: %f\n", matrix.xx, matrix.xy, matrix.yy, matrix.yx, matrix.x0, matrix.y0);
 
-  struct _textloc texts[8] = {
+  const static struct _textloc texts[8] = {
     { 
       .text = "rip lol",
       .font = "FreeSans",
@@ -133,36 +133,38 @@ void _start() {
       .text = "In Commemoration of All",
       .font = "URW Chancery L",
       .matrix = {.xx = 70, .xy = 0, .yy = -70, .yx = 0, .x0 = 0, .y0 = 0},
-      .origin_x = 1250,
-      .origin_y = 240,
+      .origin_x = 1200,
+      .origin_y = 220,
     },
     { 
       .text = "the Soda That I Consumed",
       .font = "URW Chancery L",
       .matrix = {.xx = 70, .xy = 0, .yy = -70, .yx = 0, .x0 = 0, .y0 = 0},
-      .origin_x = 1200,
-      .origin_y = 180,
+      .origin_x = 1150,
+      .origin_y = 160,
     },
     { 
       .text = "in the Making of This Demo",
       .font = "URW Chancery L",
       .matrix = {.xx = 70, .xy = 0, .yy = -70, .yx = 0, .x0 = 0, .y0 = 0},
-      .origin_x = 1150,
-      .origin_y = 120,
+      .origin_x = 1100,
+      .origin_y = 100,
     }
   };
 
+  cairoCtx->backend->set_source_rgba(cairoCtx, 1.0, 1.0, 1.0, 1.0);
   for (int i = 0; i < 8; i++) {
+    // printf("%f, %f, %s\n", texts[i].origin_x, texts[i].origin_y, texts[i].text);
     cairo_select_font_face(cairoCtx, texts[i].font, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
     cairoCtx->backend->set_font_matrix(cairoCtx, &texts[i].matrix);
     cairoCtx->backend->move_to(cairoCtx, texts[i].origin_x, texts[i].origin_y);
     cairo_show_text(cairoCtx, texts[i].text);
   }
 
-  //make this not shitty?
-  for (int i = 0; i < 4 * CANVAS_HEIGHT * CANVAS_WIDTH; i++) {
-    data[i] = 0xFF - data[i];
-  }
+  // //make this not shitty?
+  // for (int i = 0; i < 4 * CANVAS_HEIGHT * CANVAS_WIDTH; i++) {
+  //   data[i] = 0xFF - data[i];
+  // }
 
   //create a floating point backing texture for a framebuffer
   GLuint textureA;
@@ -171,7 +173,7 @@ void _start() {
   glBindTexture(GL_TEXTURE_2D, textureA);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, CANVAS_WIDTH, CANVAS_HEIGHT, 0, GL_BGRA, GL_UNSIGNED_BYTE, data);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, CANVAS_WIDTH, CANVAS_HEIGHT, 0, GL_BGRA, GL_UNSIGNED_BYTE, fbdata);
 
   //create a framebuffer we can render everything to
   GLuint fboA;
@@ -230,21 +232,21 @@ void _start() {
 
   //enable additive blending so we don't have to do so in the shader
   glEnable(GL_BLEND);
-  glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
-  glBlendFuncSeparate(GL_ONE, GL_ONE, GL_ONE, GL_ONE);
+  // glBlendEquationSeparate( GL_FUNC_SUBTRACT, GL_FUNC_ADD);
+  glBlendFuncSeparate( GL_ONE, GL_ONE, GL_ONE, GL_ONE);
 
-  glFinish();
+  // glFinish();
 
   //begin collecting samples, using the shader as the renderer
   // for (int x = 0; x < 1; x++) {
     glRecti(-1,-1,1,1);
-    glFinish();
+    // glFinish();
   // }
 
   //blit our framebuffer to the screen
   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
   glBindFramebuffer(GL_READ_FRAMEBUFFER, fboA);
-  glBlitFramebuffer(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+  glBlitFramebuffer(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, GL_COLOR_BUFFER_BIT, GL_LINEAR);
 
   while(1) {
     XEvent xev;
