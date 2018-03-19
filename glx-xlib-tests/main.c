@@ -83,7 +83,7 @@ void _start() {
   glXMakeCurrent(dpy, win, glc);
 
   //clear to black and use glfinish to make sure it propagates to the screen before we start shader compilation
-  glViewport(0,0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  // glViewport(0,0, CANVAS_WIDTH, CANVAS_HEIGHT);
   // typedef void (*voidWithNoParams)();
   // voidWithNoParams glClearColorArbitrary = (voidWithNoParams)glClearColor;
   // (*glClearColorArbitrary)();
@@ -264,6 +264,7 @@ void _start() {
       asm volatile("xor rdi, rdi");
       asm volatile("syscall");
       asm volatile(".att_syntax prefix");
+       __builtin_unreachable();
     }
   }
 }
