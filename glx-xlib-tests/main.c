@@ -20,8 +20,8 @@
 #define CANVAS_HEIGHT 1080
 
 struct _textloc {
-  char* font;
   char* text;
+  char* font;
   cairo_matrix_t matrix;
   float origin_x;
   float origin_y;
@@ -247,7 +247,7 @@ void _start() {
   for (int x = 0; x < 9; x++) {
     glUniform1f(0, x);
     glRecti(-1,-1,1,1);
-    // glFinish();
+    glFinish();
   }
 
   //blit our framebuffer to the screen
