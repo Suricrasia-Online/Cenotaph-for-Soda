@@ -50,15 +50,10 @@ e_phoff:
 
 e_shoff:
 e_flags:
-__gzip:
- ;e_shoff and e_flags are 12 bytes and can be nonsense
-	db '/bin/zcat',0,
-	nop
-	nop
-
 e_ehsize:
-	nop
-	nop
+ ;e_shoff and e_flags are 12 bytes and can be nonsense
+	db 'blackle mori!',0
+
 e_phentsize:
 	dw phdrsize
 
@@ -193,6 +188,10 @@ _child:
 ; ===========================
 ; ========= STRINGS =========
 ; ===========================
+
+__gzip:
+ ;e_shoff and e_flags are 12 bytes and can be nonsense
+	db '/bin/zcat',0,
 
 ;replacing the "fd/3" with "exe\0" on the fly saves... 4 bytes
 ;its actually good we did this because the __memfd load into register 
