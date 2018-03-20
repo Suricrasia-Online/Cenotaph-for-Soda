@@ -1,6 +1,6 @@
 #version 450
-uniform float time;
-out vec4 fragColor;
+uniform float tm;
+out vec4 frg;
 
 struct Ray
 {
@@ -58,7 +58,7 @@ float tombstone(vec3 point, float w, float l, float h, float s, float s2) {
 }
 
 float cylinder(vec3 point, float r, float h, float s) {
-    return -smin(-(distance(point.xy, vec2(0.0)) - r), -(abs(point.z) - h), s);
+    return -smin(-(length(point.xy) - r), -(abs(point.z) - h), s);
 }
 
 vec2 matUnion(vec2 a, vec2 b) {
@@ -70,11 +70,10 @@ vec2 smatUnion(vec2 a, vec2 b, float k) {
 
 vec2 bottle(vec3 point) {
     //blackle were you raised in a barn? fix this shit!
-    float dist = distance(point.xy, vec2(0.0));
-    float top = point.z;
+    float dist = length(point.xy);
 
-    float tops = abs(top-0.05) - 0.95;
-    float curve = distanceToBottleCurve(vec2(top, dist - 0.3));
+    float tops = abs(point.z-0.05) - 0.95;
+    float curve = distanceToBottleCurve(vec2(point.z, dist - 0.3));
     curve += min(sin(atan(point.y/point.x)*16.0), 0.0)*0.001;
     
     float shell = -smin(-tops, -curve, 0.2);
@@ -82,7 +81,7 @@ vec2 bottle(vec3 point) {
     for (int i = 0; i < 3; i++) {
         vec2 angle = vec2(cos(3.14/3.0*float(i)), sin(3.14/3.0*float(i)));
         //note, make this a call to cylinder
-        float cut = distance(vec2(dot(point.xy, angle), point.z), vec2(dot(vec2(0.0), angle), 0.95)) - 0.06;
+        float cut = length(vec2(dot(point.xy, angle), point.z) - vec2(dot(vec2(0.0), angle), 0.95)) - 0.06;
         shell = -smin(-shell, cut, 0.1);
     }
     
@@ -124,10 +123,10 @@ vec2 scene(vec3 point) {
 
 vec3 sceneGrad(vec3 point) {
     float t = scene(point).x;
-    float x = (t - scene(point + vec3(0.001,0.0,0.0)).x);
-    float y = (t - scene(point + vec3(0.0,0.001,0.0)).x);
-    float z = (t - scene(point + vec3(0.0,0.0,0.001)).x);
-    return normalize(vec3(x,y,z));
+    return normalize(vec3(
+        t - scene(point + vec3(0.001,0.0,0.0)).x,
+        t - scene(point + vec3(0.0,0.001,0.0)).x,
+        t - scene(point + vec3(0.0,0.0,0.001)).x));
 }
 
 Ray newRay(vec3 origin, vec3 direction, vec3 attenuation, float cumdist) {
@@ -139,7 +138,7 @@ void castRay(inout Ray ray) {
     // Cast ray from origin into scene
     float sgn = sign(scene(ray.m_origin).x);
     for (int i = 0; i < 100; i++) {
-        float dist = distance(ray.m_point, ray.m_origin) + ray.m_cumdist;
+        float dist = length(ray.m_point - ray.m_origin) + ray.m_cumdist;
         if (dist > 20.0) {
             break;
         }
@@ -211,7 +210,7 @@ Ray transmissionForRay(Ray ray) {
 
 // #define 18 18
 Ray rayQueue[18];
-int raynum;
+int raynum = 1;
 void addToQueue(Ray ray) {
     if (raynum >= 18) return;
     rayQueue[raynum] = ray;
@@ -219,9 +218,7 @@ void addToQueue(Ray ray) {
 }
 
 void recursivelyRender(inout Ray ray) {
-    // if (ray.m_intersected) {
     rayQueue[0] = ray;
-    raynum = 1;
 
     for (int i = 0; i < 18; i++) {
         if (i >= raynum) break;
@@ -249,18 +246,20 @@ void recursivelyRender(inout Ray ray) {
 
 void main() {
     // Normalized pixel coordinates (from -1 to 1)
-    vec2 offset = vec2(mod(time, 3.0), floor(time/3.0))/3.0;
+    vec2 offset = vec2(mod(tm, 3.0), floor(tm/3.0))/3.0;
     vec2 uv = (gl_FragCoord.xy + offset - vec2(960.0, 540.0))/vec2(960.0, 960.0);
 
     // Camera parameters
     vec3 cameraOrigin = vec3(5.0);
-    vec3 cameraDirection = vec3(-1.414,-1.414,-1.414);
-    vec3 platePoint = (vec3(-0.71,0.71,0.0) * uv.x + vec3(0.408, 0.408, -0.816) * -uv.y);
+    vec3 cameraDirection = vec3(-1.41,-1.41,-1.41);
+    vec3 platePoint = (vec3(-0.71,0.71,0.0) * uv.x + vec3(0.41, 0.41, -0.82) * -uv.y);
 
     Ray ray = newRay(cameraOrigin, normalize(platePoint + cameraDirection), vec3(1.0), 0.0);
     recursivelyRender(ray);
 
-    ray.m_color *= 1.0 - pow(distance(uv, vec2(0.0))*0.85, 3.0);
+    //subtle noise~
+    float rnd = fract(sin(dot(uv,vec2(70.0,31.0))*79.0)*960.0*960.0);
+    ray.m_color *= 1.0 - pow(length(uv)*0.85, 3.0) + rnd*0.3;
 
-    fragColor = vec4(pow(log(ray.m_color+1)*0.16, vec3(1.3)), 1.0);
+    frg = vec4(pow(log(ray.m_color+1)*0.15, vec3(1.3)), 1.0);
 }

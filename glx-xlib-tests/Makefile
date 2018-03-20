@@ -18,6 +18,9 @@ shader.frag.min : shader.frag Makefile
 	sed -i 's/m_reflectance/i/g' shader.frag.min
 	sed -i 's/m_transparency/c/g' shader.frag.min
 
+	sed -i 's/\bRay\b/Ra/g' shader.frag.min
+	sed -i 's/\bMat\b/Ma/g' shader.frag.min
+
 shader.h : shader.frag.min Makefile
 	mono ~/Downloads/shader_minifier.exe --preserve-externals shader.frag.min -o shader.h
 
@@ -41,12 +44,12 @@ main : main.c shader.h Makefile
 	#e_shstrndx
 	dd if=/dev/zero of=main bs=1 seek=62 count=2 conv=notrunc
 	#put in my name do not steal
-	printf 'blackle' | dd of=main bs=1 seek=8 count=7 conv=notrunc
+	# printf 'blackle' | dd of=main bs=1 seek=8 count=7 conv=notrunc
 	wc -c main
 
 main_packed : main ../packer/header Makefile
 	gzip --no-name -9 -c main | wc -c
-	zopfli --gzip --i1000 -c main > main.gz
+	zopfli --gzip --i10000 -c main > main.gz
 	wc -c main.gz
 	cat ../packer/header main.gz > main_packed
 	chmod +x main_packed
