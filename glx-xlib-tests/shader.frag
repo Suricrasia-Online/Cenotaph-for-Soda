@@ -69,6 +69,7 @@ vec2 smatUnion(vec2 a, vec2 b, float k) {
 }
 
 vec2 bottle(vec3 point) {
+
     //blackle were you raised in a barn? fix this shit!
     float dist = length(point.xy);
 
@@ -209,10 +210,10 @@ Ray transmissionForRay(Ray ray) {
 }
 
 // #define 18 18
-Ray rayQueue[18];
+Ray rayQueue[MAXDEPTH];
 int raynum = 1;
 void addToQueue(Ray ray) {
-    if (raynum >= 18) return;
+    if (raynum >= MAXDEPTH) return;
     rayQueue[raynum] = ray;
     raynum++;
 }
@@ -220,7 +221,7 @@ void addToQueue(Ray ray) {
 void recursivelyRender(inout Ray ray) {
     rayQueue[0] = ray;
 
-    for (int i = 0; i < 18; i++) {
+    for (int i = 0; i < MAXDEPTH; i++) {
         if (i >= raynum) break;
 
         castRay(rayQueue[i]);
