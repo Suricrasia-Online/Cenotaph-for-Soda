@@ -1,7 +1,8 @@
 todo: 
+[ ] reorganize
 [x] clean up the code
 [x] set 1920x1080 video mode
-[ ] backup, less-than-slick bash header packer that extracts to tmp or somesuch
+[x] backup, less-than-slick bash header packer that extracts to tmp or somesuch
 [x] make the escape key be the only thing that quits.
 [!] and it must quit at any time (within reason, nixed for difficulty)
 [!] fake antialias with sdf trickery? (nixed)
