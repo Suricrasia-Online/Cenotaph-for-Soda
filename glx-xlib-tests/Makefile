@@ -49,10 +49,16 @@ main : main.c shader.h Makefile
 	# printf 'blackle' | dd of=main bs=1 seek=8 count=7 conv=notrunc
 	wc -c main
 
-main_packed : main ../packer/header Makefile
-	gzip --no-name -9 -c main | wc -c
-	zopfli --gzip --i10000 -c main > main.gz
-	wc -c main.gz
+main.gz : main Makefile
+	rm main.gz
+	zopflikrzymod --gzip --i1000 --all --t8 main
+
+main_packed : main.gz ../packer/header Makefile
 	cat ../packer/header main.gz > main_packed
 	chmod +x main_packed
 	wc -c main_packed
+
+main_packed_backup : main.gz ../backup_packer.sh Makefile
+	cat ../backup_packer.sh main.gz > main_packed_backup
+	chmod +x main_packed_backup
+	wc -c main_packed_backup
