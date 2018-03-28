@@ -39,7 +39,6 @@ vec3 lightcols[3] = vec3[3](
     vec3(0.1, 1.0, 1.0)
 );
 
-
 float smin( float a, float b, float k )
 {
     // if (k == 0.0) return min(a,b);
@@ -49,7 +48,7 @@ float smin( float a, float b, float k )
 
 float distanceToBottleCurve(vec2 point) {
     float x = point.x*2.5;
-    return point.y-0.1*sin(x + 0.2) + 0.05*sin(2.0*x) + 0.05*sin(3.0*x);
+    return point.y-0.1*sin(x + 0.6) + 0.05*sin(2.0*x) + 0.04*sin(3.0*x);
 }
 
 float tombstone(vec3 point, float w, float l, float h, float s, float s2) {
@@ -74,7 +73,7 @@ vec2 bottle(vec3 point) {
     float dist = length(point.xy);
 
     float tops = abs(point.z-0.05) - 0.95;
-    float curve = distanceToBottleCurve(vec2(point.z, dist - 0.3));
+    float curve = distanceToBottleCurve(vec2(point.z, dist - 0.29));
     curve += min(sin(atan(point.y/point.x)*16.0), 0.0)*0.001;
     
     float shell = -smin(-tops, -curve, 0.2);
@@ -93,7 +92,7 @@ vec2 bottle(vec3 point) {
     float lip = cylinder(point+vec3(0.0,0.0,0.73), 0.15, 0.01, 0.01);
     shell = min(lip, shell);
     
-    float label = cylinder(point*3.1 + vec3(0.0,0.0,-0.75), 1.0, 1.0, 0.1) / 2.9;
+    float label = cylinder(point*3.1 + vec3(0.0,0.0,-0.75), 1.05, 1.0, 0.1) / 2.9;
 
     return smatUnion(smatUnion(
         vec2(shell, 1.0),
