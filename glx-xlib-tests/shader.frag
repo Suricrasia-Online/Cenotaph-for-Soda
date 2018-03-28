@@ -259,8 +259,8 @@ void main() {
     recursivelyRender(ray);
 
     //subtle noise~
-    float rnd = fract(sin(dot(uv,vec2(70.0,31.0))*79.0)*960.0*960.0);
-    ray.m_color *= 1.0 - pow(length(uv)*0.85, 3.0) + rnd*0.3;
+    // float rnd = fract(sin(dot(uv,vec2(70.0,31.0))*79.0)*960.0*960.0);
+    ray.m_color *= 1.0 - pow(length(uv)*0.85, 3.0);// + rnd*0.3;
 
     frg = vec4(pow(log(ray.m_color+1)*0.15, vec3(1.3)), 1.0);
 }
