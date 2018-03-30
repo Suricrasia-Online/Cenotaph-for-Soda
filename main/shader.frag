@@ -67,27 +67,6 @@ vec2 smatUnion(vec2 a, vec2 b, float k) {
     return vec2(smin(a.x, b.x, k), matUnion(a, b).y);
 }
 
-bool revisionLogo(vec2 tex) {
-    vec2 uv = tex*vec2(2.5,7.0)+vec2(0.0,-1.5);
-    float ang = atan(uv.y, uv.x);
-    float len = floor(length(uv)*10.0);
-    if (len == 2. || len == 6. || len == 9.) {
-        return true;
-    }
-    if (len == 3. || len == 4. || len == 5. || len == 8. || len == 10.) {
-        return distanceToBottleCurve(vec2(ang+len,0.0))*8.11 > cos(len*8.11);
-    }
-    return false;
-}
-
-vec3 texture(vec3 point, vec3 normal, vec3 color) {
-    float angle = atan(normal.x, normal.z);
-    if (abs(point.y) < 0.5 ) {
-        return revisionLogo(vec2(angle, point.y)) ? vec3(1.0) : color;
-    }
-    return color;
-}
-
 vec2 bottle(vec3 point) {
 
     //blackle were you raised in a barn? fix this shit!
@@ -178,6 +157,22 @@ void castRay(inout Ray ray) {
     }
 }
 
+void texture(vec3 point, vec3 normal, inout Mat mat) {
+    float angle = atan(normal.x, normal.z);
+    if (abs(point.y) < 0.5 ) {
+        vec2 uv = vec2(angle, point.y)*vec2(2.5,7.0)+vec2(0.0,-1.5);
+        float ang = atan(uv.y, uv.x);
+        float len = floor(length(uv)*10.0);
+        bool val = len == 2. || len == 6. || len == 9.;
+        if (len == 3. || len == 4. || len == 5. || len == 8. || len == 10.) {
+            val = distanceToBottleCurve(vec2(ang+len,0.0))*8.11 > cos(len*8.11);
+        }
+        if(val) {
+            mat = mats[1];
+        }
+    }
+}
+
 void phongShadeRay(inout Ray ray) {
 
     if (ray.m_intersected) {
@@ -191,18 +186,17 @@ void phongShadeRay(inout Ray ray) {
             float diffuse = abs(dot(lightDirection, normal));
             float specular = pow(abs(dot(ray.m_direction, reflected)), 20.0);
 
-            vec3 diffuse_color = mat.m_diffuse;
             if (ray.m_mat == 0) {
                 if (ray.m_point.x > 1.0) {
-                    diffuse_color = diffuse_color.zyx;
+                    mat.m_diffuse = mat.m_diffuse.zyx;
                 } else if (ray.m_point.x < -1.0) {
-                    diffuse_color = diffuse_color.zxy * 0.7;
+                    mat.m_diffuse = mat.m_diffuse.yxz*0.7;
                 }
-                diffuse_color = texture(ray.m_point, normal, diffuse_color);
             }
+            texture(ray.m_point, normal, mat);
       
             //oh god blackle clean this up
-            ray.m_color += (diffuse_color * diffuse * (- mat.m_transparency + 1.0) + specular)*lightcols[i];
+            ray.m_color += (mat.m_diffuse * diffuse * (- mat.m_transparency + 1.0) + specular)*lightcols[i];
         }
     } else {
         ray.m_color += 1.0-ray.m_direction*ray.m_direction;//vec3(pow(abs(dot(lightDirection, ray.m_direction)), 25.0))*lightcols[i];
@@ -213,6 +207,7 @@ Ray reflectionForRay(Ray ray) {
     Mat mat = mats[ray.m_mat];
     float sgn = sign(scene(ray.m_origin).x);
     vec3 normal = -sceneGrad(ray.m_point);
+    texture(ray.m_point, normal, mat);
     float frensel = abs(dot(ray.m_direction, normal));
     vec3 atten = ray.m_attenuation * mat.m_reflectance * (1.0 - frensel*0.98);
     vec3 reflected = reflect(ray.m_direction, normal);
@@ -224,6 +219,7 @@ Ray transmissionForRay(Ray ray) {
     Mat mat = mats[ray.m_mat];
     float sgn = sign(scene(ray.m_origin).x);
     vec3 normal = -sceneGrad(ray.m_point);
+    texture(ray.m_point, normal, mat);
     // float frensel = sqrt(abs(dot(ray.m_direction, normal)));
     vec3 atten = ray.m_attenuation * mat.m_transparency;// * frensel;
 
