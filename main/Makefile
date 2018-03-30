@@ -50,7 +50,7 @@ main : main.c shader.h Makefile
 	wc -c main
 
 main.gz : main Makefile
-	rm main.gz
+	-rm main.gz
 	zopflikrzymod --gzip --i1000 --all --t8 main
 
 main_packed : main.gz ../packer/header Makefile

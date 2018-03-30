@@ -67,6 +67,54 @@ vec2 smatUnion(vec2 a, vec2 b, float k) {
     return vec2(smin(a.x, b.x, k), matUnion(a, b).y);
 }
 
+bool revisionLogo(vec2 uv) {
+    float ang = atan(uv.x, uv.y);
+    float len = length(uv);
+    if (len < 0.1) {
+        return false;
+    }
+    if (len < 0.2) {
+        return true;
+    }
+    if (len < 0.3) {
+        return pow(ang+0.6, 2.0) < 0.3;
+    }
+    if (len < 0.4) {
+        return sin(ang)+sin(ang*2.0)-sin(ang*3.0)+sin(ang*5.0) > 1.0;
+    }
+    if (len < 0.5) {
+        return sin(ang)+sin(ang*2.0)-sin(ang*3.0)+sin(ang*5.0) > -0.5;
+    }
+    if (len < 0.6) {
+        return true;
+    }
+    if (len < 0.7) {
+        return false;
+    }
+    if (len < 0.8) {
+        return sin(ang)-sin(ang*2.5)+sin(ang*3.5)-sin(ang*5.5) > 0.0;
+    }
+    if (len < 0.9) {
+        return true;
+    }
+    if (len < 1.0) {
+        return sin(ang)-sin(ang*2.0)+sin(ang*4.0)-sin(ang*6.0) > 0.5;
+    }
+    return false;
+}
+
+vec3 uvtex(vec2 tex) {
+    return vec3(revisionLogo(tex*vec2(2.5,7.0)+vec2(0.0,-1.5)) ? 0.1 : 1.0);
+}
+
+vec3 texture(vec3 point, vec3 normal) {
+    float angle = atan(normal.x, normal.z);
+    if (abs(point.y) < 0.5 ) {
+        return uvtex(vec2(angle, point.y));
+    }
+    return vec3(1.0);
+}
+
 vec2 bottle(vec3 point) {
 
     //blackle were you raised in a barn? fix this shit!
@@ -74,7 +122,7 @@ vec2 bottle(vec3 point) {
 
     float tops = abs(point.z-0.05) - 0.95;
     float curve = distanceToBottleCurve(vec2(point.z, dist - 0.29));
-    curve += min(sin(atan(point.y/point.x)*16.0), 0.0)*0.001;
+    curve += min(sin(atan(point.y,point.x)*16.0), 0.0)*0.001;
     
     float shell = -smin(-tops, -curve, 0.2);
     
@@ -86,7 +134,7 @@ vec2 bottle(vec3 point) {
     }
     
     float lid = cylinder(point+vec3(0.0,0.0,0.89), 0.14, 0.10, 0.02);
-    lid += abs(sin(atan(point.y/point.x)*32.0))*0.0005 * (1.0 - clamp(abs(dist - 0.14)*32.0, 0.0, 1.0));
+    lid += abs(sin(atan(point.y,point.x)*32.0))*0.0005 * (1.0 - clamp(abs(dist - 0.14)*32.0, 0.0, 1.0));
     lid = min(lid, cylinder(point+vec3(0.0,0.0,0.77), 0.14, 0.02, 0.02));
     
     float lip = cylinder(point+vec3(0.0,0.0,0.73), 0.15, 0.01, 0.01);
@@ -172,11 +220,13 @@ void phongShadeRay(inout Ray ray) {
 
             vec3 diffuse_color = mat.m_diffuse;
             if (ray.m_mat == 0) {
+                vec3 color = texture(ray.m_point, normal);
                 if (ray.m_point.x > 1.0) {
                     diffuse_color = diffuse_color.zyx;
                 } else if (ray.m_point.x < -1.0) {
                     diffuse_color = diffuse_color.zxy * 0.7;
                 }
+                diffuse_color *= color;
             }
       
             //oh god blackle clean this up
@@ -238,12 +288,6 @@ void recursivelyRender(inout Ray ray) {
     }
 }
 
-// vec3 grade(vec3 val) {
-//     // return log(val+1)*0.5;
-//     return pow(log(val+1)*0.9, vec3(1.2));
-//     // return -2.56 * x*x*x + 4.63 * x*x - 1.19 * x + 0.125;
-// }
-
 void main() {
     // Normalized pixel coordinates (from -1 to 1)
     vec2 offset = vec2(mod(tm, 3.0), floor(tm/3.0))/3.0;
@@ -257,9 +301,7 @@ void main() {
     Ray ray = newRay(cameraOrigin, normalize(platePoint + cameraDirection), vec3(1.0), 0.0);
     recursivelyRender(ray);
 
-    //subtle noise~
-    // float rnd = fract(sin(dot(uv,vec2(70.0,31.0))*79.0)*960.0*960.0);
-    ray.m_color *= 1.0 - pow(length(uv)*0.85, 3.0);// + rnd*0.3;
+    ray.m_color *= 1.0 - pow(length(uv)*0.85, 3.0);
 
     frg = vec4(pow(log(ray.m_color+1)*0.15, vec3(1.3)), 1.0);
 }
