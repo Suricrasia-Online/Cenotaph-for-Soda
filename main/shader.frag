@@ -1,6 +1,6 @@
 #version 450
-uniform float tm;
-out vec4 frg;
+uniform float Te;
+out vec4 Fr;
 
 struct Ray
 {
@@ -47,8 +47,7 @@ float smin( float a, float b, float k )
 }
 
 float distanceToBottleCurve(vec2 point) {
-    float x = point.x*2.5;
-    return point.y-0.1*sin(x + 0.6) + 0.05*sin(2.0*x) + 0.04*sin(3.0*x);
+    return point.y-0.1*sin(point.x*2.5 + 0.6) + 0.05*sin(5.0*point.x) + 0.04*sin(7.5*point.x);
 }
 
 float tombstone(vec3 point, float w, float l, float h, float s, float s2) {
@@ -60,11 +59,8 @@ float cylinder(vec3 point, float r, float h, float s) {
     return -smin(-(length(point.xy) - r), -(abs(point.z) - h), s);
 }
 
-vec2 matUnion(vec2 a, vec2 b) {
-    return (a.x < b.x) ? a : b;
-}
 vec2 smatUnion(vec2 a, vec2 b, float k) {
-    return vec2(smin(a.x, b.x, k), matUnion(a, b).y);
+    return vec2(smin(a.x, b.x, k), (a.x < b.x) ? a.y : b.y);
 }
 
 vec2 bottle(vec3 point) {
@@ -72,11 +68,9 @@ vec2 bottle(vec3 point) {
     //blackle were you raised in a barn? fix this shit!
     float dist = length(point.xy);
 
-    float tops = abs(point.z-0.05) - 0.95;
-    float curve = distanceToBottleCurve(vec2(point.z, dist - 0.29));
-    curve += min(sin(atan(point.y,point.x)*16.0), 0.0)*0.001;
+    float curve = distanceToBottleCurve(vec2(point.z, dist - 0.29)) + min(sin(atan(point.y,point.x)*16.0), 0.0)*0.001;
     
-    float shell = -smin(-tops, -curve, 0.2);
+    float shell = -smin(0.95-abs(point.z-0.05), -curve, 0.2);
     
     for (int i = 0; i < 3; i++) {
         vec2 angle = vec2(cos(3.14/3.0*float(i)), sin(3.14/3.0*float(i)));
@@ -84,20 +78,13 @@ vec2 bottle(vec3 point) {
         float cut = length(vec2(dot(point.xy, angle), point.z) - vec2(dot(vec2(0.0), angle), 0.95)) - 0.06;
         shell = -smin(-shell, cut, 0.1);
     }
-    
-    float lid = cylinder(point+vec3(0.0,0.0,0.89), 0.14, 0.10, 0.02);
-    lid += abs(sin(atan(point.y,point.x)*32.0))*0.0005 * (1.0 - clamp(abs(dist - 0.14)*32.0, 0.0, 1.0));
-    lid = min(lid, cylinder(point+vec3(0.0,0.0,0.77), 0.14, 0.02, 0.02));
-    
-    float lip = cylinder(point+vec3(0.0,0.0,0.73), 0.15, 0.01, 0.01);
-    shell = min(lip, shell);
-    
-    float label = cylinder(point*3.1 + vec3(0.0,0.0,-0.75), 1.05, 1.0, 0.1) / 2.9;
+
+    shell = min(cylinder(point+vec3(0.0,0.0,0.73), 0.15, 0.01, 0.01), shell);
 
     return smatUnion(smatUnion(
         vec2(shell, 1.0),
-        vec2(label, 0.0), 0.02),
-        vec2(lid, 0.0), 0.02);
+        vec2(cylinder(point*3.1 + vec3(0.0,0.0,-0.75), 1.05, 1.0, 0.1) / 2.9, 0.0), 0.02),
+        vec2(min(cylinder(point+vec3(0.0,0.0,0.89), 0.14, 0.10, 0.02) + abs(sin(atan(point.y,point.x)*32.0))*0.0005 * (1.0 - clamp(abs(dist - 0.14)*32.0, 0.0, 1.0)), cylinder(point+vec3(0.0,0.0,0.77), 0.14, 0.02, 0.02)), 0.0), 0.02);
     // return uni;
 }
 
@@ -112,13 +99,10 @@ vec2 scene(vec3 point) {
 
 
     vec3 p = point - offset;
-    float wobble = cos(point.z)*cos(point.y*5.0)*cos(point.x*5.0)*0.01;
-    float grave = -smin(-p.z, tombstone(p, 0.6 + p.z*0.2, 1.2 + p.z*0.2, 0.75, 0.1, 0.1), 0.1);
-    float stone = tombstone(p + vec3(0.0, 1.5, 0.0), 0.5 - p.z*0.01, 0.12 - p.z*0.01, 1.2, 0.1, 0.5);
     vec3 p4b = (p - vec3(0.0, 0.0, -0.25)).zxy;
 
     // return bottle(p4b);
-    return matUnion(vec2(wobble + smin(stone, grave, 0.1), 1.0), bottle(p4b));
+    return smatUnion(vec2(cos(point.z)*cos(point.y*5.0)*cos(point.x*5.0)*0.01 + smin(tombstone(p + vec3(0.0, 1.5, 0.0), 0.5 - p.z*0.01, 0.12 - p.z*0.01, 1.2, 0.1, 0.5), -smin(-p.z, tombstone(p, 0.6 + p.z*0.2, 1.2 + p.z*0.2, 0.75, 0.1, 0.1), 0.1), 0.1), 1.0), bottle(p4b), 0.0);
 }
 
 vec3 sceneGrad(vec3 point) {
@@ -258,8 +242,8 @@ void recursivelyRender(inout Ray ray) {
 
 void main() {
     // Normalized pixel coordinates (from -1 to 1)
-    vec2 offset = vec2(mod(tm, 3.0), floor(tm/3.0))/3.0;
-    vec2 uv = (gl_FragCoord.xy + offset - vec2(960.0, 540.0))/vec2(960.0, 960.0);
+    vec2 uv = (gl_FragCoord.xy + vec2(mod(Te, 3.0), floor(Te/3.0))/3.0 - vec2(960.0, 540.0))/vec2(960.0, 960.0);
+
 
     // Camera parameters
     vec3 cameraOrigin = vec3(5.0);
@@ -271,5 +255,5 @@ void main() {
 
     ray.m_color *= 1.0 - pow(length(uv)*0.85, 3.0);
 
-    frg = vec4(pow(log(ray.m_color+1)*0.15, vec3(1.3)), 1.0);
+    Fr = vec4(pow(log(ray.m_color+1)*0.15, vec3(1.3)), 1.0);
 }

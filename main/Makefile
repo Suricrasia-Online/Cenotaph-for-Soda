@@ -51,4 +51,4 @@ main : main.c shader.h Makefile
 
 main.gz : main Makefile
 	-rm main.gz
-	zopflikrzymod --gzip --i1000 --all --t8 main
+	zopflikrzymod --gzip --i5000 --all --t8 main
