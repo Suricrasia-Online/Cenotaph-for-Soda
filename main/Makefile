@@ -18,10 +18,10 @@ shader.frag.min : shader.frag Makefile
 	sed -i 's/m_reflectance/i/g' shader.frag.min
 	sed -i 's/m_transparency/c/g' shader.frag.min
 
-	sed -i 's/MAXDEPTH/18/g' shader.frag.min
+	sed -i 's/MAXDEPTH/3/g' shader.frag.min
 
-	sed -i 's/\bRay\b/Ra/g' shader.frag.min
-	sed -i 's/\bMat\b/Ma/g' shader.frag.min
+	sed -i 's/\bRay\b/Co/g' shader.frag.min
+	sed -i 's/\bMat\b/Cr/g' shader.frag.min
 
 shader.h : shader.frag.min Makefile
 	mono ~/Downloads/shader_minifier.exe --preserve-externals shader.frag.min -o shader.h
@@ -52,13 +52,3 @@ main : main.c shader.h Makefile
 main.gz : main Makefile
 	-rm main.gz
 	zopflikrzymod --gzip --i1000 --all --t8 main
-
-main_packed : main.gz ../packer/header Makefile
-	cat ../packer/header main.gz > main_packed
-	chmod +x main_packed
-	wc -c main_packed
-
-main_packed_backup : main.gz ../backup_packer.sh Makefile
-	cat ../backup_packer.sh main.gz > main_packed_backup
-	chmod +x main_packed_backup
-	wc -c main_packed_backup

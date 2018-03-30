@@ -67,52 +67,25 @@ vec2 smatUnion(vec2 a, vec2 b, float k) {
     return vec2(smin(a.x, b.x, k), matUnion(a, b).y);
 }
 
-bool revisionLogo(vec2 uv) {
-    float ang = atan(uv.x, uv.y);
-    float len = length(uv);
-    if (len < 0.1) {
-        return false;
-    }
-    if (len < 0.2) {
+bool revisionLogo(vec2 tex) {
+    vec2 uv = tex*vec2(2.5,7.0)+vec2(0.0,-1.5);
+    float ang = atan(uv.y, uv.x);
+    float len = floor(length(uv)*10.0);
+    if (len == 2. || len == 6. || len == 9.) {
         return true;
     }
-    if (len < 0.3) {
-        return pow(ang+0.6, 2.0) < 0.3;
-    }
-    if (len < 0.4) {
-        return sin(ang)+sin(ang*2.0)-sin(ang*3.0)+sin(ang*5.0) > 1.0;
-    }
-    if (len < 0.5) {
-        return sin(ang)+sin(ang*2.0)-sin(ang*3.0)+sin(ang*5.0) > -0.5;
-    }
-    if (len < 0.6) {
-        return true;
-    }
-    if (len < 0.7) {
-        return false;
-    }
-    if (len < 0.8) {
-        return sin(ang)-sin(ang*2.5)+sin(ang*3.5)-sin(ang*5.5) > 0.0;
-    }
-    if (len < 0.9) {
-        return true;
-    }
-    if (len < 1.0) {
-        return sin(ang)-sin(ang*2.0)+sin(ang*4.0)-sin(ang*6.0) > 0.5;
+    if (len == 3. || len == 4. || len == 5. || len == 8. || len == 10.) {
+        return distanceToBottleCurve(vec2(ang+len,0.0))*8.11 > cos(len*8.11);
     }
     return false;
 }
 
-vec3 uvtex(vec2 tex) {
-    return vec3(revisionLogo(tex*vec2(2.5,7.0)+vec2(0.0,-1.5)) ? 0.1 : 1.0);
-}
-
-vec3 texture(vec3 point, vec3 normal) {
+vec3 texture(vec3 point, vec3 normal, vec3 color) {
     float angle = atan(normal.x, normal.z);
     if (abs(point.y) < 0.5 ) {
-        return uvtex(vec2(angle, point.y));
+        return revisionLogo(vec2(angle, point.y)) ? vec3(1.0) : color;
     }
-    return vec3(1.0);
+    return color;
 }
 
 vec2 bottle(vec3 point) {
@@ -220,13 +193,12 @@ void phongShadeRay(inout Ray ray) {
 
             vec3 diffuse_color = mat.m_diffuse;
             if (ray.m_mat == 0) {
-                vec3 color = texture(ray.m_point, normal);
                 if (ray.m_point.x > 1.0) {
                     diffuse_color = diffuse_color.zyx;
                 } else if (ray.m_point.x < -1.0) {
                     diffuse_color = diffuse_color.zxy * 0.7;
                 }
-                diffuse_color *= color;
+                diffuse_color = texture(ray.m_point, normal, diffuse_color);
             }
       
             //oh god blackle clean this up
@@ -283,9 +255,9 @@ void recursivelyRender(inout Ray ray) {
     for (int i = 0; i < raynum; i++) {
         ray.m_color += rayQueue[i].m_color * rayQueue[i].m_attenuation;
     }
-    if (raynum == 1) {
-        ray.m_color = vec3(2.0);
-    }
+    // if (raynum == 1) {
+    //     ray.m_color = vec3(2.0);
+    // }
 }
 
 void main() {
