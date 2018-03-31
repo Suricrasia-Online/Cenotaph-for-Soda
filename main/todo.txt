@@ -1,5 +1,5 @@
 todo: 
-[ ] reorganize
+[x] reorganize
 [x] clean up the code
 [x] set 1920x1080 video mode
 [x] backup, less-than-slick bash header packer that extracts to tmp or somesuch
@@ -8,8 +8,8 @@ todo:
 [!] fake antialias with sdf trickery? (nixed)
 [!] have the text be embossed in the plastic (nixed)
 [x] choose a good font
-[!] make a cute label for the bottles. I have more than enough space! (nixed)
-			- hng revision logo
+[/] make a cute label for the bottles. I have more than enough space! (nixed)
+			[x] hng revision logo
 			- with the 2018 hexagonal aesthetic~~
 			- maybe make the label bigger?
 [x] try out using fragment blending instead of buffering
@@ -17,6 +17,6 @@ todo:
 			- curve from gimp
 [x] render some text with cairo into a texture?~
 [!] add slight swirl to break up regularity, reduce step size a tiny amount (nixed)
-[!] make the soda bottle look more like a soda bottle (nixed....maybe...)
+[x] make the soda bottle look more like a soda bottle
 [!] gamma correct rendering (nixed)
 [!] random positioning (nixed)
