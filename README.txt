@@ -4,7 +4,7 @@ Cenotaph for Soda is a demo for 64-bit linux with nvidia graphics cards. Should 
 
 This is my first release at a party. Hope you like it {^wvw^}
 
-Tools/Langs:  GLSL, Assembly, C, GZip, Zopfli KrzYmod, Cairo, ctrl-alt-tests shader minifier, fishypack (TBR)
+Tools/Langs: GLSL, Assembly, C, GZip, Zopfli KrzYmod, Cairo, ctrl-alt-tests shader minifier, fishypack (TBR)
 
 Requirements:
  - Kernel version >=3.17
