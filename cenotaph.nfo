@@ -11,42 +11,15 @@
 ├───────────────────────────┬────────────────────────────┤
 │ Released at Revision 2018 │ Code / Gfx by Blackle Mori │
 ├───────────────────────────┴────────────────────────────┤
-│ Tools/Langs: GLSL, Assembly, C, GZip, Zopfli, KrzYmod, │
+│ Tools/Langs:  GLSL, Assembly, C, GZip, Zopfli KrzYmod, │
 │ Cairo, ctrl-alt-tests shader minifier, fishypack (TBR) │
 ├────────────────────────────────────────────────────────┤
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
-│                                                        │
+│ i n c o m i n g    m s g    f r o m    b l a c k l e : │
+├────────────────────────────────────────────────────────┤
+│ This is my first graphics demo and my first release at │
+│ a demoparty! I hope you enjoy it as much as I did when │
+│ writing it. This is also the first use of "fishypack", │
+│ a simple 198-byte packer for 64-bit linux that I made. │
+│ After the compo I intend to tidy it up and open source │
+│ it so all the linux sceners out there can use it too!! │
 └────────────────────────────────────────────────────────┘
