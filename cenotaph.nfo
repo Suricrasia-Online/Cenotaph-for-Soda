@@ -14,6 +14,13 @@
 │ Tools/Langs:  GLSL, Assembly, C, GZip, Zopfli KrzYmod, │
 │ Cairo, ctrl-alt-tests shader minifier, fishypack (TBR) │
 ├────────────────────────────────────────────────────────┤
+│ Dependencies/Assumptions:                              │
+│  - Kernel version >=3.17    - Presence of /bin/zcat    │
+│  - Nvidia graphics card     - Proprietary drivers      │
+│  - OpenGL version >=4.5.0   - 1920x1080 video mode     │
+│  - libGL, libX11, libXrandr, libcairo                  │
+│  - "FreeSans", "FreeSerif", and "URW Chancery L" fonts │
+├────────────────────────────────────────────────────────┤
 │ i n c o m i n g    m s g    f r o m    b l a c k l e : │
 ├────────────────────────────────────────────────────────┤
 │ This is my first graphics demo and my first release at │
