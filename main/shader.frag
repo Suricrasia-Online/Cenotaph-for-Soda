@@ -11,7 +11,6 @@ struct Ray
   int m_mat;
   vec3 m_color;
   vec3 m_attenuation;
-  float m_cumdist;
 };
     
 struct Mat
@@ -113,31 +112,29 @@ vec3 sceneGrad(vec3 point) {
         t - scene(point + vec3(0.0,0.0,0.001)).x));
 }
 
-Ray newRay(vec3 origin, vec3 direction, vec3 attenuation, float cumdist) {
+Ray newRay(vec3 origin, vec3 direction, vec3 attenuation) {
     // Create a default ray
-    return Ray(origin, direction, origin, false, -1, vec3(0.0), attenuation, cumdist);
+    return Ray(origin, direction, origin, false, -1, vec3(0.0), attenuation);
 }
 
 void castRay(inout Ray ray) {
     // Cast ray from origin into scene
     float sgn = sign(scene(ray.m_origin).x);
     for (int i = 0; i < 100; i++) {
-        float dist = length(ray.m_point - ray.m_origin) + ray.m_cumdist;
+        float dist = length(ray.m_point - ray.m_origin);
         if (dist > 20.0) {
             break;
         }
 
         vec2 smpl = scene(ray.m_point);
-        float res = smpl.x;
         
-        if (abs(res) < 0.0001) {
+        if (abs(smpl.x) < 0.0001) {
             ray.m_intersected = true;
             ray.m_mat = int(smpl.y);
-            ray.m_cumdist = dist;
             break;
         }
         
-        ray.m_point += res * ray.m_direction * sgn;
+        ray.m_point += smpl.x * ray.m_direction * sgn;
     }
 }
 
@@ -149,7 +146,7 @@ void texture(vec3 point, vec3 normal, inout Mat mat) {
         float len = floor(length(uv)*10.0);
         bool val = len == 2. || len == 6. || len == 9.;
         if (len == 3. || len == 4. || len == 5. || len == 8. || len == 10.) {
-            val = distanceToBottleCurve(vec2(ang+len,0.0))*8.11 > cos(len*8.11);
+            val = distanceToBottleCurve(vec2(ang+len,0.0))*7.99 > cos(len*7.99);
         }
         if(val) {
             mat = mats[1];
@@ -196,7 +193,7 @@ Ray reflectionForRay(Ray ray) {
     vec3 atten = ray.m_attenuation * mat.m_reflectance * (1.0 - frensel*0.98);
     vec3 reflected = reflect(ray.m_direction, normal);
 
-    return newRay(ray.m_point + normal*0.0001*4.0*sgn, reflected, atten, ray.m_cumdist);
+    return newRay(ray.m_point + normal*0.0001*4.0*sgn, reflected, atten);
 }
 
 Ray transmissionForRay(Ray ray) {
@@ -207,7 +204,7 @@ Ray transmissionForRay(Ray ray) {
     // float frensel = sqrt(abs(dot(ray.m_direction, normal)));
     vec3 atten = ray.m_attenuation * mat.m_transparency;// * frensel;
 
-    return newRay(ray.m_point - normal*0.0001*4.0*sgn, ray.m_direction, atten, ray.m_cumdist);
+    return newRay(ray.m_point - normal*0.0001*4.0*sgn, ray.m_direction, atten);
 }
 
 // #define 18 18
@@ -250,7 +247,7 @@ void main() {
     vec3 cameraDirection = vec3(-1.41,-1.41,-1.41);
     vec3 platePoint = (vec3(-0.71,0.71,0.0) * uv.x + vec3(0.41, 0.41, -0.82) * -uv.y);
 
-    Ray ray = newRay(cameraOrigin, normalize(platePoint + cameraDirection), vec3(1.0), 0.0);
+    Ray ray = newRay(cameraOrigin, normalize(platePoint + cameraDirection), vec3(1.0));
     recursivelyRender(ray);
 
     ray.m_color *= 1.0 - pow(length(uv)*0.85, 3.0);

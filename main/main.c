@@ -101,22 +101,29 @@ void _start() {
   // cairo_set_font_matrix(cairoCtx, &matrix);
   // printf("xx: %f, xy: %f, yy: %f, yx: %f, x0: %f, y0: %f\n", matrix.xx, matrix.xy, matrix.yy, matrix.yx, matrix.x0, matrix.y0);
 
-  const static struct _textloc texts[8] = {
+  const static struct _textloc texts[9] = {
     { 
       .text = "rip lol",
-      .font = "FreeSans",
-      .matrix = {.xx = 50, .xy = -10, .yy = -50, .yx = 20, .x0 = 0, .y0 = 0},
+      .font = "FreeSerif",
+      .matrix = {.xx = 50, .xy = -10, .yy = -50, .yx = 21, .x0 = 0, .y0 = 0},
       .origin_x = 190,
       .origin_y = 550,
     },
     { 
-      .text = "gg no re",
-      .font = "FreeSans",
-      .matrix = {.xx = 35, .xy = -6, .yy = -35, .yx = 15, .x0 = 0, .y0 = 0},
-      .origin_x = 640,
-      .origin_y = 760,
+      .text = "you were",
+      .font = "FreeSerif",
+      .matrix = {.xx = 35, .xy = -6, .yy = -35, .yx = 16, .x0 = 0, .y0 = 0},
+      .origin_x = 642,
+      .origin_y = 780,
     },
     { 
+      .text = "so tastey",
+      .font = "FreeSerif",
+      .matrix = {.xx = 35, .xy = -6, .yy = -35, .yx = 16, .x0 = 0, .y0 = 0},
+      .origin_x = 647,
+      .origin_y = 750,
+    },
+    {
       .text = "how do i",
       .font = "FreeSans",
       .matrix = {.xx = 25, .xy = 0, .yy = -25, .yx = 0, .x0 = 0, .y0 = 0},
@@ -151,7 +158,7 @@ void _start() {
       .origin_x = 1150,
       .origin_y = 160,
     },
-    { 
+    {
       .text = "in the Making of this Demo",
       .font = "URW Chancery L",
       .matrix = {.xx = 70, .xy = 0, .yy = -70, .yx = 0, .x0 = 0, .y0 = 0},
@@ -161,7 +168,7 @@ void _start() {
   };
 
   cairoCtx->backend->set_source_rgba(cairoCtx, 0.5, 0.5, 0.5, 1.0);
-  for (int i = 0; i < 8; i++) {
+  for (int i = 0; i < 9; i++) {
     // printf("%f, %f, %s\n", texts[i].origin_x, texts[i].origin_y, texts[i].text);
     cairo_select_font_face(cairoCtx, texts[i].font, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
     cairoCtx->backend->set_font_matrix(cairoCtx, &texts[i].matrix);
@@ -253,6 +260,7 @@ void _start() {
   //blit our framebuffer to the screen
   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
   glBindFramebuffer(GL_READ_FRAMEBUFFER, fboA);
+
   glBlitFramebuffer(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
   while(1) {
