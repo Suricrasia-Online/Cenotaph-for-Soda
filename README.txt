@@ -15,3 +15,5 @@ Requirements:
  - 1920x1080 video mode
  - libGL, libX11, libXrandr, libcairo
  - "FreeSans", "FreeSerif", and "URW Chancery L" fonts (available by default on ubuntu)
+
+ also included is cenotaph_safe, which removes some nasty hacks which should make it run better on other systems
