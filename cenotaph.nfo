@@ -11,8 +11,9 @@
 ├───────────────────────────┬────────────────────────────┤
 │ Released at Revision 2018 │ Code / Gfx by Blackle Mori │
 ├───────────────────────────┴────────────────────────────┤
-│                                                        │
-│                                                        │
+│ Tools/Langs: GLSL, Assembly, C, GZip, Zopfli, KrzYmod, │
+│ Cairo, ctrl-alt-tests shader minifier, fishypack (TBR) │
+├────────────────────────────────────────────────────────┤
 │                                                        │
 │                                                        │
 │                                                        │
