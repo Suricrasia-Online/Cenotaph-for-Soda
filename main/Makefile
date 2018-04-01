@@ -18,7 +18,7 @@ shader.frag.min : shader.frag Makefile
 	sed -i 's/m_reflectance/i/g' shader.frag.min
 	sed -i 's/m_transparency/c/g' shader.frag.min
 
-	sed -i 's/MAXDEPTH/18/g' shader.frag.min
+	sed -i 's/MAXDEPTH/1/g' shader.frag.min
 
 	sed -i 's/\bRay\b/Co/g' shader.frag.min
 	sed -i 's/\bMat\b/Cr/g' shader.frag.min
@@ -27,7 +27,7 @@ shader.h : shader.frag.min Makefile
 	mono ~/Downloads/shader_minifier.exe --preserve-externals shader.frag.min -o shader.h
 
 main : main.c shader.h Makefile
-	gcc -o main main.c -lX11 -lGL -lcairo -lXrandr -O1 -fno-tree-ch -std=gnu11 -nostartfiles -nostdlib
+	gcc -o main main.c -lX11 -lGL -lcairo -lXrandr -Wl,--hash-style=gnu -O1 -fno-tree-ch -std=gnu11 -nostartfiles -nostdlib
 	strip main
 	strip -R .note -R .comment -R .eh_frame -R .eh_frame_hdr -R .note.gnu.build-id main
 	#remove section header
@@ -52,3 +52,9 @@ main : main.c shader.h Makefile
 main.gz : main Makefile
 	-rm main.gz
 	zopflikrzymod --gzip --i5000 --all --t8 main
+	wc -c main.gz
+
+main.xz : main Makefile
+	-rm main.gz
+	lzma --format=lzma -9 --extreme --lzma1=preset=9,lc=1,lp=0,pb=0 --keep --stdout main > main.xz
+	wc -c main.xz
