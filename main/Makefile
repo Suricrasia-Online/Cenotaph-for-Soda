@@ -55,6 +55,6 @@ main.gz : main Makefile
 	wc -c main.gz
 
 main.xz : main Makefile
-	-rm main.gz
+	-rm main.xz
 	lzma --format=lzma -9 --extreme --lzma1=preset=9,lc=1,lp=0,pb=0 --keep --stdout main > main.xz
 	wc -c main.xz
