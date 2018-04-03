@@ -27,11 +27,11 @@ shader.h : shader.frag.min Makefile
 	mono ~/Downloads/shader_minifier.exe --preserve-externals shader.frag.min -o shader.h
 
 main : main.c shader.h Makefile
-	gcc -o main main.c -lX11 -lGL -lcairo -lXrandr -Wl,--hash-style=gnu -O1 -fno-tree-ch -std=gnu11 -nostartfiles -nostdlib
+	gcc -o main main.c -lX11 -lGL -lcairo -lXrandr -Wl,--hash-style=gnu -no-pie -O1 -fno-tree-ch -std=gnu11 -nostartfiles -nostdlib
 	strip main
 	strip -R .note -R .comment -R .eh_frame -R .eh_frame_hdr -R .note.gnu.build-id main
 	#remove section header
-	truncate --size=-1152 main
+	truncate --size=-1072 main
 	#clear out useless bits
 	sed -i 's/_edata/\x00\x00\x00\x00\x00\x00/g' main;
 	sed -i 's/__bss_start/\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00/g' main;
