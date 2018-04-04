@@ -27,7 +27,9 @@ e_type:
 e_machine:
 	dw 3
 e_version:
-	dd 1
+	xor ebx, ebx
+	jmp p_flags
+	; dd 1
 e_entry:
 	dd e_padding
 e_phoff:
@@ -75,17 +77,18 @@ p_paddr:
 	jz _child
 	; dd $$
 p_filesz:
-	jmp _parent
+	jmp e_version
 	dw 0
 	; dd filesize
 p_memsz:
-	jmp _parent+4
+	jmp e_version+4
 	dw 0
 	; dd filesize
 p_flags:
-	dd 5
+	mov ax, sys_waitid
 p_align:
-	dd 0x1000
+	jmp _parent
+	dw 0
 
 phdrsize      equ     $ - phdr
 
@@ -107,8 +110,8 @@ _start:
 
 _parent:
 
-	xor ebx, ebx
-	mov ax, sys_waitid
+	; xor ebx, ebx
+	; mov ax, sys_waitid
 	mov si, 4
 	int 0x80
 

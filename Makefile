@@ -8,10 +8,10 @@ main:
 	make -C main main.xz
 
 packer:
-	make -C packer header
+	make -C packer header-32
 
 cenotaph : main packer Makefile
-	cat ./packer/header ./main/main.xz > cenotaph
+	cat ./packer/header-32 ./main/main.xz > cenotaph
 	chmod +x cenotaph
 	wc -c cenotaph
 
