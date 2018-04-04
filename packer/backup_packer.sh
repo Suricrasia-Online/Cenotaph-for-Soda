@@ -1,2 +1,2 @@
 #!/bin/sh
-sed '1d;2d' $0 | xzcat > /tmp/exe; chmod +x /tmp/exe; exec /tmp/exe;
+sed 1,2d $0|xzcat>_;chmod +x _;exec _;
